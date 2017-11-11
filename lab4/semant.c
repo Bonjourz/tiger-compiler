@@ -47,13 +47,13 @@ int match(Ty_ty left, Ty_ty right) {
 	if (left->kind == Ty_nil && right->kind == Ty_nil)
 		return 0;
 
-	if (left->kind == right->kind)
+	if (left == right)
 		return 1;
 
-	if (right->kind == Ty_nil || left->kind == Ty_record)
+	if (right->kind == Ty_nil && left->kind == Ty_record)
 		return 1;
 
-	if (left->kind == Ty_nil || right->kind == Ty_record)
+	if (left->kind == Ty_nil && right->kind == Ty_record)
 		return 1;
 
 	return 0;
@@ -65,7 +65,7 @@ Ty_fieldList construct_field_ty(S_table tenv, A_fieldList recordList, A_pos pos)
 
 	Ty_ty record_ty = S_look(tenv, recordList->head->typ);
 	if (!record_ty) {
-		EM_error(pos, "The type %s has not been defined", S_name(recordList->head->typ));
+		EM_error(pos, "undefined type %s", S_name(recordList->head->typ));
 		return NULL;
 	}
 	Ty_field ty_field = Ty_Field(recordList->head->name, record_ty);
@@ -78,7 +78,7 @@ Ty_tyList makeFormalTyList(S_table tenv, A_fieldList params) {
 
 	Ty_ty ty = S_look(tenv, params->head->typ);
 	if (!ty) {
-		EM_error(params->head->pos, "The type %s has not been defined", S_name(params->head->typ));
+		EM_error(params->head->pos, "undefined type %s", S_name(params->head->typ));
 		return NULL;
 	}
 	return Ty_TyList(actual_ty(ty), makeFormalTyList(tenv, params->tail));
@@ -86,7 +86,7 @@ Ty_tyList makeFormalTyList(S_table tenv, A_fieldList params) {
 
 struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 	switch(a->kind) {
-		case A_varExp:
+		case A_varExp: 
 			return transVar(venv, tenv, a->u.var);
 
 		case A_nilExp:
@@ -103,20 +103,22 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 			if (x && x->kind == E_funEntry) {
 				A_expList args = a->u.call.args;
 				Ty_tyList formals = x->u.fun.formals;
+				int i = 0;
 				for (; args && formals; args = args->tail, formals = formals->tail) {
 					struct expty argTy = transExp(venv, tenv, args->head);
 					if (!match(formals->head, argTy.ty))
-						EM_error(args->head->pos, "Function call type mismatch!");
-
-					if (formals || args)
-						EM_error(a->pos, "The number of params and args mismatch!");
+						EM_error(args->head->pos, "para type mismatch");
 				}
+				if (formals)
+						EM_error(a->pos, "more params");
+				if (args)
+						EM_error(a->pos, "too many params in function %s", S_name(a->u.call.func));
 
 				return expTy(NULL, x->u.fun.result);
 			}
 
 			else {
-				EM_error(a->pos, "The Function is undefined");
+				EM_error(a->pos, "undefined function %s", S_name(a->u.call.func));
                 return expTy(NULL, Ty_Int());
 			}
 		}
@@ -127,6 +129,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 			A_oper oper = a->u.op.oper;
 			if (oper == A_plusOp || oper == A_minusOp ||
 				oper == A_timesOp || oper == A_divideOp ) {
+
 				if (left.ty->kind != Ty_int)
 					EM_error(a->u.op.left->pos, "integer required");
 				if (right.ty->kind != Ty_int)
@@ -160,7 +163,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 			/* struct {S_symbol typ; A_efieldList fields;} record; */
 			Ty_ty record_ty = S_look(tenv, a->u.record.typ);
 			if (!record_ty)
-				EM_error(a->pos, "Undefined type %s", S_name(a->u.record.typ));
+				EM_error(a->pos, "undefined type %s", S_name(a->u.record.typ));
 
 			Ty_ty act_re_ty = actual_ty(record_ty);
 			if (act_re_ty->kind != Ty_record)
@@ -188,8 +191,8 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 			/* Must consider if there is no sequence of expression */
 			struct expty r = expTy(NULL, Ty_Void());
 			A_expList seq = a->u.seq;
-			for (A_exp expr = seq->head; seq; seq = seq->tail)
-				r = transExp(venv, tenv, expr);
+			for (; seq; seq = seq->tail)
+				r = transExp(venv, tenv, seq->head);
 
 			return r;
 		}
@@ -213,7 +216,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 			struct expty exp = transExp(venv, tenv, a->u.assign.exp);
 			/* If lvalue is of a record type, then exp's result type can be nil */
 			if (!match(var.ty, exp.ty))
-				EM_error(a->pos, "The var and exp are not matched");
+				EM_error(a->pos, "unmatched assign exp");
 
 			return expTy(NULL, Ty_Void());
 		}
@@ -227,9 +230,9 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 			else {
 				struct expty then = transExp(venv, tenv, a->u.iff.then);
 				if (a->u.iff.elsee) {
-					struct expty elsee = transExp(venv, tenv, a->u.iff.then);
+					struct expty elsee = transExp(venv, tenv, a->u.iff.elsee);
 					if (!match(then.ty, elsee.ty))
-						EM_error(a->u.iff.then->pos, "The type of then and elsee mismatch");
+						EM_error(a->u.iff.then->pos, "then exp and else exp type mismatch");
 
 					else
 						return expTy(NULL, then.ty);
@@ -306,8 +309,8 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 			if (!arr_ty)
 				EM_error(a->pos, "Undefied variable");
 
-			if (!match(actual_ty(arr_ty), init.ty)) {
-				EM_error(a->pos, "same type required");
+			if (!match(actual_ty(arr_ty->u.array), init.ty)) {
+				EM_error(a->pos, "type mismatch");
 				return expTy(NULL, Ty_Void());
 			}
 
@@ -327,7 +330,7 @@ void transDec(S_table venv, S_table tenv, A_dec d) {
 				A_fundecList funcdec_list_c = funcdec_list->tail;
 				for (; funcdec_list_c; funcdec_list_c = funcdec_list_c->tail) {
 					if (funcdec_list_c->head->name == funcdec_list->head->name)
-						EM_error(funcdec_list->head->pos, "Cannot declare repeatly");		
+						EM_error(funcdec_list->head->pos, "two functions have the same name");		
 				}
 
 				A_fundec funcdec = funcdec_list->head;
@@ -346,11 +349,12 @@ void transDec(S_table venv, S_table tenv, A_dec d) {
 				S_beginScope(venv);
 				A_fundec f = funcdec_list->head;
 				A_fieldList l;
-				for (l = f->params; l; l = l->tail) {
+				for (l = f->params; l; l = l->tail)
 					S_enter(venv, l->head->name, E_VarEntry(actual_ty(S_look(tenv, l->head->typ))));
-				}
 
-				transExp(venv, tenv, f->body);
+				struct expty body_expty = transExp(venv, tenv, f->body);
+				if (body_expty.ty->kind != Ty_void && f->result == S_Symbol(""))
+					EM_error(f->pos, "procedure returns value");
 				S_endScope(venv);
 			}
 
@@ -368,9 +372,9 @@ void transDec(S_table venv, S_table tenv, A_dec d) {
 					EM_error(d->pos, "The type is not defined");
 					break;
 				}
-				Ty_ty actual_type = actual_ty(type);
+				Ty_ty actual_type = actual_ty(type); 
 				if (!match(actual_type, e.ty)) {
-					EM_error(d->pos, "The var cannot be assigned because of the type");
+					EM_error(d->pos, "type mismatch");
 					break;
 				}
 
@@ -381,7 +385,7 @@ void transDec(S_table venv, S_table tenv, A_dec d) {
 			else {
 				/* "var a := nil" is illegal */
 				if (e.ty->kind == Ty_nil)
-					EM_error(d->pos, "The type of expression should not be nil");
+					EM_error(d->pos, "init should not be nil without type specified");
 
 				else
 					S_enter(venv, d->u.var.var, E_VarEntry(e.ty));
@@ -398,7 +402,7 @@ void transDec(S_table venv, S_table tenv, A_dec d) {
 				A_nametyList list_c = list->tail;
 				for (; list_c; list_c = list_c->tail) {
 					if (list_c->head->name == list->head->name)
-						EM_error(list->head->ty->pos, "Cannot declare repeatly");
+						EM_error(list->head->ty->pos, "two types have the same name");
 				}
 
 				S_enter(tenv, list->head->name, Ty_Name(list->head->name, NULL));
@@ -499,7 +503,7 @@ struct expty transVar(S_table venv, S_table tenv, A_var v) {
 		case A_fieldVar: {
 			struct expty var_ty = transVar(venv, tenv, v->u.field.var);
 			if (var_ty.ty->kind != Ty_record) {
-				EM_error(v->u.field.var->pos, "undefined variable");
+				EM_error(v->u.field.var->pos, "not a record type");
 				return expTy(NULL, Ty_Int());
 			}
 
@@ -510,13 +514,13 @@ struct expty transVar(S_table venv, S_table tenv, A_var v) {
 					return expTy(NULL, actual_ty(field->ty));
 			}
 
-			EM_error(v->u.field.var->pos, "Undefined field variable");
+			EM_error(v->u.field.var->pos, "field %s doesn't exist", S_name(v->u.field.sym));
 		}
 
 		case A_subscriptVar: {
 			struct expty var_ty = transVar(venv, tenv, v->u.subscript.var);
 			if (var_ty.ty->kind != Ty_array) {
-				EM_error(v->u.subscript.var->pos, "undefined variable");
+				EM_error(v->u.subscript.var->pos, "array type required");
 				return expTy(NULL, Ty_Int());
 			}
 
