@@ -9,7 +9,7 @@ E_enventry E_VarEntry(Ty_ty ty)
 {
 	E_enventry entry = checked_malloc(sizeof(*entry));
 	entry->u.var.ty = ty;
-
+	entry->kind = E_varEntry;
 	return entry;
 }
 
@@ -18,6 +18,7 @@ E_enventry E_ROVarEntry(Ty_ty ty)
 	E_enventry entry = checked_malloc(sizeof(*entry));
 	entry->u.var.ty = ty;
 	entry->readonly = 1;
+	entry->kind = E_varEntry;
 	return entry;
 }
 
@@ -26,7 +27,7 @@ E_enventry E_FunEntry(Ty_tyList formals, Ty_ty result)
 	E_enventry entry = checked_malloc(sizeof(*entry));
 	entry->u.fun.formals = formals;
 	entry->u.fun.result = result;
-
+	entry->kind = E_funEntry;
 	return entry;
 }
 
