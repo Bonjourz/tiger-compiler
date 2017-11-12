@@ -161,8 +161,10 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 		case A_recordExp: {
 			/* struct {S_symbol typ; A_efieldList fields;} record; */
 			Ty_ty record_ty = S_look(tenv, a->u.record.typ);
-			if (!record_ty)
+			if (!record_ty) {
 				EM_error(a->pos, "undefined type %s", S_name(a->u.record.typ));
+				return expTy(NULL, Ty_Int());
+			}
 
 			Ty_ty act_re_ty = actual_ty(record_ty);
 			if (act_re_ty->kind != Ty_record)
