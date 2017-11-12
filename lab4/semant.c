@@ -225,7 +225,6 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 		}
 
 		case A_ifExp: {
-			/* Need to refactor */
 			struct expty test = transExp(venv, tenv, a->u.iff.test);
 			if (test.ty->kind != Ty_int)
 				EM_error(a->u.iff.test->pos, "Require integer");
