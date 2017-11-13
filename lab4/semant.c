@@ -530,8 +530,14 @@ struct expty transVar(S_table venv, S_table tenv, A_var v) {
 
 		case A_subscriptVar: {
 			struct expty var_ty = transVar(venv, tenv, v->u.subscript.var);
+			struct expty exp_ty = transExp(venv, tenv, v->u.subscript.exp);
 			if (var_ty.ty->kind != Ty_array) {
 				EM_error(v->u.subscript.var->pos, "array type required");
+				return expTy(NULL, Ty_Int());
+			}
+
+			if (exp_ty.ty->kind != Ty_int) {
+				EM_error(v->u.subscript.exp->pos, "integer required");
 				return expTy(NULL, Ty_Int());
 			}
 
