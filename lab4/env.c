@@ -31,6 +31,14 @@ E_enventry E_FunEntry(Ty_tyList formals, Ty_ty result)
 	return entry;
 }
 
+E_enventry E_BreakEntry(int level)
+{
+	E_enventry entry = checked_malloc(sizeof(*entry));
+	entry->kind = E_breakEntry;
+	entry->u.breake.level = level;
+	return entry;
+}
+
 //sym->value
 //type_id(name, S_symbol) -> type (Ty_ty)
 S_table E_base_tenv(void)

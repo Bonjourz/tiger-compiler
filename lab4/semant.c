@@ -12,6 +12,8 @@
 
 /*Lab4: Your implementation of lab4*/
 
+/* Used in break check */
+static int level = 0;
 
 typedef void* Tr_exp;
 struct expty
@@ -109,7 +111,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 						EM_error(args->head->pos, "para type mismatch");
 				}
 				if (formals)
-						EM_error(a->pos, "to more params in function %s", S_name(a->u.call.func));
+						EM_error(a->pos, "too more params in function %s", S_name(a->u.call.func));
 				if (args)
 						EM_error(a->pos, "too many params in function %s", S_name(a->u.call.func));
 
@@ -252,7 +254,12 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 				EM_error(a->u.whilee.test->pos, "Require integer");
 
 			else {
+				level ++;
+				S_beginScope(tenv);
+				S_enter(venv, S_Symbol("break"), E_BreakEntry(level));
 				struct expty body = transExp(venv, tenv, a->u.whilee.body);
+				S_endScope(tenv);
+				level --;
 				if (body.ty->kind != Ty_void)
 					EM_error(a->u.whilee.body->pos, "while body must produce no value");
 				else
@@ -268,11 +275,14 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 	    	if (lo.ty->kind != Ty_int || hi.ty->kind != Ty_int)
 	    		EM_error(a->pos, "for exp's range type is not integer");
 
+	    	level++;
 	    	S_beginScope(venv);
+	    	S_enter(venv, S_Symbol("break"), E_BreakEntry(level));
 	    	/* The id defined by for should be read-only */
 	    	S_enter(venv, a->u.forr.var, E_ROVarEntry(Ty_Int()));
 	    	struct expty body = transExp(venv, tenv, a->u.forr.body);
 	    	S_endScope(venv);
+	    	level--;
 
 	    	if (body.ty->kind != Ty_void)
 	    		EM_error(a->pos, "The body of the for loop should return no type");
@@ -280,8 +290,13 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 	    	return expTy(NULL, Ty_Void());
 	    }
 
-	    case A_breakExp:
+	    case A_breakExp: {
+	    	E_enventry e = S_look(venv, S_Symbol("break"));
+	    	if (!e || e->u.breake.level != level)
+	    		EM_error(a->pos, "Break must exist in while and for loop!");
+	    	
 	    	return expTy(NULL, Ty_Void());
+	    }
 
 		case A_letExp: {
 			struct expty exp;

@@ -8,18 +8,20 @@
 typedef struct E_enventry_ *E_enventry;
 
 struct E_enventry_ {
-	enum {E_varEntry, E_funEntry} kind;
+	enum {E_varEntry, E_funEntry, E_breakEntry} kind;
 	int readonly; //for loop var
 	union 
 	{
 		struct {Ty_ty ty;} var;
 		struct {Ty_tyList formals; Ty_ty result;} fun;
+		struct {int level;} breake;
 	} u;
 };
 
 E_enventry E_VarEntry(Ty_ty ty);
 E_enventry E_ROVarEntry(Ty_ty ty);
 E_enventry E_FunEntry(Ty_tyList formals, Ty_ty result);
+E_enventry E_BreakEntry(int level);
 
 S_table E_base_tenv(void);
 S_table E_base_venv(void);
