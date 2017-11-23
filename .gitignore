@@ -1,4 +1,4 @@
-*.out
+a.out
 *.o
 *.pdf
 *.tar.gz
