@@ -26,5 +26,11 @@ Tr_accessList Tr_formals(Tr_level level);
 
 Tr_access Tr_allocLocal(Tr_level level, bool escape);
 
+F_fragList Tr_getResult(void);
+
+void Tr_procEntryExit(Tr_level, Tr_exp, Tr_accessList);
+
+Tr_exp Tr_Null();
+Tr_exp Tr_String();
 
 #endif

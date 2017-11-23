@@ -6,13 +6,16 @@
 
 #include "tree.h"
 
+extern const int F_wordSize;
+
 typedef struct F_frame_ *F_frame;
+
+F_frame F_newFrame(Temp_label, U_boolList);
 
 typedef struct F_access_ *F_access;
 typedef struct F_accessList_ *F_accessList;
 
 struct F_accessList_ {F_access head; F_accessList tail;};
-
 
 /* declaration for fragments */
 typedef struct F_frag_ *F_frag;
