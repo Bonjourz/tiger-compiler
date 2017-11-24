@@ -9,7 +9,7 @@ struct expty;
 struct expty transVar(S_table venv, S_table tenv, A_var v);
 struct expty transExp(S_table venv, S_table tenv, A_exp a);
 void		 transDec(S_table venv, S_table tenv, A_dec d);
-void		 transTy (              S_table tenv, A_namety n);
+Ty_ty		 transTy (              S_table tenv, A_namety a);
 
 void SEM_transProg(A_exp exp);
 
