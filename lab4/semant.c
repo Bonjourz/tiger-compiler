@@ -331,7 +331,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a) {
 			if (!arr_ty)
 				EM_error(a->pos, "Undefied variable");
 
-			if (!match(actual_ty(arr_ty->u.array), init.ty)) {
+			if (!match(actual_ty(actual_ty(arr_ty)->u.array), init.ty)) {
 				EM_error(a->pos, "type mismatch");
 				return expTy(NULL, Ty_Void());
 			}
