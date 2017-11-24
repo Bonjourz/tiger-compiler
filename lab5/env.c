@@ -56,62 +56,91 @@ S_table E_base_tenv(void)
 	return table;
 }
 
-S_table E_base_venv(void)
-{
-	S_table venv;
+S_table E_base_venv(void){
+	S_table venv = S_empty();
+	Tr_level level = Tr_outermost();
 
-	Ty_ty result;
-	Ty_tyList formals;
-	
-	Temp_label label = NULL;
-	Tr_level level;
-	
-	level = Tr_outermost();
-	venv = S_empty();
+	Ty_tyList formals = NULL;
+	Ty_ty result = NULL;
 
-	S_enter(venv,S_Symbol("flush"),E_FunEntry(level,label,NULL,Ty_Void()));
-	
-	result = Ty_Int();
+	//flush
+	formals = NULL;
+	result = Ty_Void();
+	S_enter(venv, S_Symbol("flush"), E_FunEntry(level, S_Symbol("flush"), formals, result));
 
-	formals = checked_malloc(sizeof(*formals));
+	//exit
+	formals = (Ty_tyList)checked_malloc(sizeof(*formals));
 	formals->head = Ty_Int();
 	formals->tail = NULL;
-	S_enter(venv,S_Symbol("exit"),E_FunEntry(level,label,formals,Ty_Void()));
-
-	S_enter(venv,S_Symbol("not"),E_FunEntry(level,label,formals,result));
-
-	result = Ty_String();
+	result = Ty_Void();
+	S_enter(venv, S_Symbol("exit"), E_FunEntry(level, S_Symbol("exit"), formals, result));
 	
-	S_enter(venv,S_Symbol("chr"),E_FunEntry(level,label,formals,result));
+	//not
+	formals = (Ty_tyList)checked_malloc(sizeof(*formals));
+	formals->head = Ty_Int();
+	formals->tail = NULL;
+	result = Ty_Int();
+	S_enter(venv, S_Symbol("not"), E_FunEntry(level, S_Symbol("not"), formals, result));
 
-	S_enter(venv,S_Symbol("getchar"),E_FunEntry(level,label,NULL,result));
+	//chr
+	formals = (Ty_tyList)checked_malloc(sizeof(*formals));
+	formals->head = Ty_Int();
+	formals->tail = NULL;
+	result = Ty_String();
+	S_enter(venv, S_Symbol("chr"), E_FunEntry(level, S_Symbol("chr"), formals, result));
 
-	formals = checked_malloc(sizeof(*formals));
+	//getchar
+	formals = NULL;
+	result = Ty_String();
+	S_enter(venv, S_Symbol("getchar"), E_FunEntry(level, S_Symbol("getchar"), formals, result));
+
+	//print
+	formals = (Ty_tyList)checked_malloc(sizeof(*formals));
 	formals->head = Ty_String();
 	formals->tail = NULL;
+	result = Ty_Void();
+	S_enter(venv,S_Symbol("print"), E_FunEntry(level, S_Symbol("print"), formals, result));
 
-	S_enter(venv,S_Symbol("print"),E_FunEntry(level,label,formals,Ty_Void()));
-
+	//ord
+	formals = (Ty_tyList)checked_malloc(sizeof(*formals));
+	formals->head = Ty_String();
+	formals->tail = NULL;
 	result = Ty_Int();
-	S_enter(venv,S_Symbol("ord"),E_FunEntry(level,label,formals,result));
+	S_enter(venv, S_Symbol("ord"), E_FunEntry(level, S_Symbol("ord"), formals, result));
 
-	S_enter(venv,S_Symbol("size"),E_FunEntry(level,label,formals,result));
+	//size
+	formals = (Ty_tyList)checked_malloc(sizeof(*formals));
+	formals->head = Ty_String();
+	formals->tail = NULL;
+	result = Ty_Int();
+	S_enter(venv, S_Symbol("size"), E_FunEntry(level, S_Symbol("size"), formals, result));
 
-	result = Ty_String();
+	//concat
 	formals = checked_malloc(sizeof(*formals));
 	formals->head = Ty_String();
 	formals->tail = checked_malloc(sizeof(*formals));
 	formals->tail->head = Ty_String();
-	S_enter(venv,S_Symbol("concat"),E_FunEntry(level,label,formals,result));
+	formals->tail->tail = NULL;
+	result = Ty_String();
+	S_enter(venv, S_Symbol("concat"),E_FunEntry(level, S_Symbol("concat"), formals, result));
 
+	//substring
 	formals = checked_malloc(sizeof(*formals));
 	formals->head = Ty_String();
 	formals->tail = checked_malloc(sizeof(*formals));
 	formals->tail->head = Ty_Int();
 	formals->tail->tail = checked_malloc(sizeof(*formals));
 	formals->tail->tail->head = Ty_Int();
-	S_enter(venv,S_Symbol("substring"),E_FunEntry(level,label,formals,result));
+	formals->tail->tail->tail = NULL;
+	result = Ty_String();
+	S_enter(venv, S_Symbol("substring"),E_FunEntry(level, S_Symbol("substring"), formals, result));
 
-
+	//printi
+	formals = checked_malloc(sizeof(*formals));
+	formals->head = Ty_Int();
+	formals->tail = NULL;
+	result = Ty_Void();
+	S_enter(venv, S_Symbol("printi"),E_FunEntry(level, S_Symbol("printi"), formals, result));
+	
 	return venv;
 }

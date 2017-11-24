@@ -42,7 +42,7 @@ F_fragList SEM_transProg(A_exp exp){
 
 Ty_ty actual_ty(Ty_ty ty) {
 	if (ty->kind == Ty_name)
-		return ty->u.name.ty;
+		return actual_ty(ty->u.name.ty);
 
 	else
 		return ty;
@@ -64,17 +64,17 @@ int match(Ty_ty left, Ty_ty right) {
 	return 0;
 }
 
-Ty_fieldList construct_field_ty(S_table tenv, A_fieldList recordList, A_pos pos) {
+Ty_fieldList makeTyFieldList(S_table tenv, A_fieldList recordList) {
 	if (!recordList)
 		return NULL;
 
 	Ty_ty record_ty = S_look(tenv, recordList->head->typ);
 	if (!record_ty) {
-		EM_error(pos, "undefined type %s", S_name(recordList->head->typ));
+		EM_error(recordList->head->pos, "undefined type %s", S_name(recordList->head->typ));
 		return NULL;
 	}
 	Ty_field ty_field = Ty_Field(recordList->head->name, record_ty);
-	return Ty_FieldList(ty_field, construct_field_ty(tenv, recordList->tail, pos));
+	return Ty_FieldList(ty_field, makeTyFieldList(tenv, recordList->tail));
 }
 
 Ty_tyList makeFormalTyList(S_table tenv, A_fieldList params) {
@@ -87,6 +87,24 @@ Ty_tyList makeFormalTyList(S_table tenv, A_fieldList params) {
 		return NULL;
 	}
 	return Ty_TyList(actual_ty(ty), makeFormalTyList(tenv, params->tail));
+}
+
+int cycleDefine(S_table tenv, A_namety namety) {
+	if (namety->ty->kind != A_nameTy)
+		return 0;
+
+	Ty_ty ty = S_look(tenv, namety->name);
+	Ty_ty actual = ty->u.name.ty;
+	while(actual->kind == Ty_name) {
+		ty->u.name.ty = S_look(tenv, actual->u.name.sym);
+		actual = actual->u.name.ty;
+		if (ty == actual)
+			return 1;
+	}
+
+	// Here the type of actual is not 'Ty_name'
+	ty->u.name.ty = actual;
+	return 0;
 }
 
 Tr_expList makeTrExpList(Tr_exp exp, Tr_expList l) {
@@ -422,14 +440,14 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level cur_l, Temp_label 
 				E_enventry e = S_look(venv, f->name);
 				Tr_level new_l = e->u.fun.level;
 				Tr_accessList acc_l = Tr_TrLevelVar(new_l);
-				for (l = f->params; l, acc_l; l = l->tail, acc_l = acc_l->tail)
+				for (l = f->params; l && acc_l; l = l->tail, acc_l = acc_l->tail)
 					S_enter(venv, l->head->name, E_VarEntry(acc_l->head, actual_ty(S_look(tenv, l->head->typ))));
 
 				struct expty body = transExp(venv, tenv, f->body, new_l, breakl);
 				if (body.ty->kind != Ty_void && f->result == S_Symbol(""))
 					EM_error(f->pos, "procedure returns value");
 				S_endScope(venv);
-				Tr_procEntryExit(new_l, body.exp, acc_l);
+				Tr_procEntryExit(new_l, body.exp,  Tr_TrLevelVar(new_l));
 			}
 			return Tr_NullExp();
 		}
@@ -483,77 +501,21 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level cur_l, Temp_label 
 				S_enter(tenv, list->head->name, Ty_Name(list->head->name, NULL));
 			}
 
-			/* Calculate the num of Ty_name, and initialize the dec of record and array */
-			int name_dec_loop = 0;
 			for (list = d->u.type; list; list = list->tail) {
-				A_ty dec_ty = list->head->ty;
-				switch(dec_ty->kind) {
-					case A_nameTy: {
-						/* type l_ty = r_ty */
-						Ty_ty l_ty = S_look(tenv, list->head->name);
-						Ty_ty r_ty = S_look(tenv, dec_ty->u.name);
-						if (!r_ty) {
-							EM_error(dec_ty->pos, "The type named %s doesn't exit", S_name(dec_ty->u.name));
-							return NULL;
-						}
-						l_ty->u.name.ty = r_ty;
-						l_ty->u.name.sym = list->head->name;
-						name_dec_loop ++;
-						break;
-					}
-
-					case A_recordTy: {
-						Ty_ty ty = S_look(tenv, list->head->name);
-						ty->u.record = construct_field_ty(tenv, dec_ty->u.record, dec_ty->pos);
-						ty->kind = Ty_record;
-						break;
-					}
-
-					case A_arrayTy: {
-						Ty_ty ty = S_look(tenv, list->head->name);
-						/* The type of the element of the array */
-						Ty_ty ele_ty = S_look(tenv, dec_ty->u.array);
-
-						if (!ele_ty) {
-							EM_error(dec_ty->pos, "The type named %s doesn't exist", S_name(dec_ty->u.array));
-							return NULL;
-						}
-
-						ty->kind = Ty_array;
-						ty->u.array = ele_ty;
-						break;
-					}
-				}
+				Ty_ty r = transTy(tenv, list->head);
+				if (!r)
+					return NULL;
+				Ty_ty ty = S_look(tenv, list->head->name);
+				ty->u.name.ty = r;
 			}
 
 			/* Check the recursive definition */
-			for (list = d->u.type; list; list = list->tail) {
-				if (list->head->ty->kind != A_nameTy)
-					continue;
-				/* The definition must be name_ty */
-				int cur_name_loop = name_dec_loop;
-				/* type b_name = r_name */
-				S_symbol b_name = list->head->name;
-				S_symbol r_name = list->head->ty->u.name;
-				while (1) {
-					if (cur_name_loop == 0) {
-						EM_error(list->head->ty->pos, "illegal type cycle");
-						return NULL;
-					}
-
-					Ty_ty r_ty = S_look(tenv, r_name);
-					if (r_ty->kind != Ty_name) {
-						Ty_ty look_ty = S_look(tenv, b_name);
-						look_ty->u.name.ty = r_ty;
-						name_dec_loop--;
-						break;
-					} 
-					else {
-						r_name = r_ty->u.name.sym;
-						cur_name_loop--;
-					}
+			for (list = d->u.type; list; list = list->tail)
+				if (cycleDefine(tenv, list->head)) {
+					EM_error(list->head->ty->pos, "illegal type cycle");
+					return NULL;
 				}
-			}
+
 			return Tr_NullExp();
 		}
 	}
@@ -605,11 +567,41 @@ struct expty transVar(S_table venv, S_table tenv, A_var v, Tr_level cur_l, Temp_
 				return expTy(NULL, Ty_Int());
 			}
 
-			return expTy(Tr_SubscriptVar(var.exp, exp.exp), actual_ty(var.ty)->u.array);
+			return expTy(Tr_SubscriptVar(var.exp, exp.exp), actual_ty(actual_ty(var.ty)->u.array));
 		}
 	}
 }
 
-void transTy(S_table tenv, A_namety n) {
-	/* empty */
+Ty_ty transTy(S_table tenv, A_namety a) {
+	A_ty t = a->ty;
+	switch(t->kind) {
+		case A_nameTy: {
+			Ty_ty ty = S_look(tenv, t->u.name);
+			if (!ty) {
+				EM_error(t->pos, "The type named %s doesn't exit", S_name(t->u.name));
+				return NULL;
+			}
+
+			return ty;
+		}
+
+		case A_recordTy: {
+			Ty_fieldList l = makeTyFieldList(tenv, t->u.record);
+			if (!l)
+				return NULL;
+
+			return Ty_Record(l);
+		}
+
+		case A_arrayTy: {
+			Ty_ty ty = S_look(tenv, t->u.array);
+			if (!ty) {
+				EM_error(t->pos, "The type named %s doesn't exit", S_name(t->u.name));
+				return NULL;
+			}
+
+			return Ty_Array(ty);
+		}
+	}
+	assert(0);
 }
