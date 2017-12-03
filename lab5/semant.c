@@ -96,7 +96,6 @@ int cycleDefine(S_table tenv, A_namety namety) {
 	Ty_ty ty = S_look(tenv, namety->name);
 	Ty_ty actual = ty->u.name.ty;
 	while(actual->kind == Ty_name) {
-		ty->u.name.ty = S_look(tenv, actual->u.name.sym);
 		actual = actual->u.name.ty;
 		if (ty == actual)
 			return 1;
@@ -258,6 +257,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level cur_l, Temp_
 		}
 
 		case A_seqExp: {
+			// TO DO : the result of transexp
 			/* Must consider if there is no sequence of expression */
 			Tr_exp exp = Tr_NullExp();
 			struct expty r = expTy(exp, Ty_Void());
@@ -367,21 +367,25 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level cur_l, Temp_
 	    
 
 		case A_letExp: {
+			// TO DO: the result of transdec
 			struct expty exp;
+			Tr_exp decExp = Tr_NullExp();
 			A_decList d;
 			S_beginScope(venv);
 			S_beginScope(tenv);
 			//int count = 0; //delete
 			for (d = a->u.let.decs; d; d = d->tail) {
-				transDec(venv, tenv, d->head, cur_l, breakl);
+				Tr_exp ele = transDec(venv, tenv, d->head, cur_l, breakl);
+				decExp = Tr_LetExp(ele, decExp);
 				//printf("let count %d\n", count++);
 			}
 
 			//printf("letexp\n");
 			exp = transExp(venv, tenv, a->u.let.body, cur_l, breakl);
+			Tr_exp r = Tr_LetExp(decExp, exp.exp);
 			S_endScope(tenv);
 			S_endScope(venv);
-			return exp;
+			return expTy(r, exp.ty);
 		}
 
 		case A_arrayExp: {
@@ -456,6 +460,7 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level cur_l, Temp_label 
 			/* struct {S_symbol var; S_symbol typ; A_exp init; bool escape;} var; */
 			struct expty e = transExp(venv, tenv, d->u.var.init, cur_l, breakl);
 			/* var id : type-id := exp */
+			Tr_access acc = NULL;
 			if (d->u.var.typ != S_Symbol("")) {
 				Ty_ty type = S_look(tenv, d->u.var.typ);
 				/* Check if the type has been defined */
@@ -468,7 +473,7 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level cur_l, Temp_label 
 					EM_error(d->pos, "type mismatch");
 					break;
 				}
-				Tr_access acc = Tr_allocLocal(cur_l, d->u.var.escape);
+				acc = Tr_allocLocal(cur_l, d->u.var.escape);
 				S_enter(venv, d->u.var.var, E_VarEntry(acc, type));
 			}
 
@@ -479,12 +484,11 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level cur_l, Temp_label 
 					EM_error(d->pos, "init should not be nil without type specified");
 
 				else {
-					Tr_access acc = Tr_allocLocal(cur_l, d->u.var.escape);
+					acc = Tr_allocLocal(cur_l, d->u.var.escape);
 					S_enter(venv, d->u.var.var, E_VarEntry(acc, e.ty));
 				}
 			}
-
-			return Tr_NullExp();
+			return Tr_VarDec(acc, e.exp);
 		}
 		case A_typeDec: {
 			/* A_nametyList type; */

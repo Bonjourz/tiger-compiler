@@ -200,7 +200,7 @@ static T_stm unNx(Tr_exp e) {
 			Temp_label t = Temp_newlabel(), f = Temp_newlabel();
 			doPatch(e->u.cx.trues, t);
 			doPatch(e->u.cx.falses, f);
-			/* To Do */
+			/* To Do:(maybe) */
 			return T_Seq(T_Move(T_Temp(r), T_Const(1)),
 							T_Seq(e->u.cx.stm,
 								T_Seq(T_Label(f),
@@ -253,9 +253,6 @@ static T_exp makeStaticLink(Tr_level cur, Tr_level dst) {
 }
 
 static T_expList makeTExpList(Tr_expList l) {
-	while(l && l->head)
-		l = l->tail;
-
 	if (l && l->head)
 		return T_ExpList(unEx(l->head), makeTExpList(l->tail));
 
@@ -418,6 +415,13 @@ Tr_exp Tr_BreakExp(Temp_label breakl) {
 	return Tr_Nx(T_Jump(T_Name(breakl), Temp_LabelList(breakl, NULL)));
 }
 
+Tr_exp Tr_LetExp(Tr_exp head, Tr_exp tail) {
+	if (tail == NULL)
+		return Tr_Nx(T_Seq(unNx(head), NULL));
+
+	return Tr_Nx(T_Seq(unNx(head), unNx(tail)));
+}
+
 Tr_exp Tr_ArrayExp(Tr_exp size, Tr_exp init) {
 	return Tr_Ex(F_externalCall("initArray", 
 									T_ExpList(unEx(size), 
@@ -436,4 +440,10 @@ Tr_exp Tr_FieldVar(Tr_exp var, int index) {
 Tr_exp Tr_SubscriptVar(Tr_exp var, Tr_exp index) {
 	return Tr_Ex(T_Mem(T_Binop(T_plus, unEx(var), 
 												T_Binop(T_mul, unEx(index), T_Const(F_wordSize)))));
+}
+
+Tr_exp Tr_VarDec(Tr_access acc, Tr_exp init) {
+	/* The definition of var is always in its own level */
+	T_exp dst = F_Exp(acc->access, F_FP());
+	return Tr_Nx(T_Move(dst, unEx(init)));
 }
