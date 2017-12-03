@@ -51,7 +51,6 @@ int cycleDefine(S_table tenv, A_namety namety) {
 	Ty_ty ty = S_look(tenv, namety->name);
 	Ty_ty actual = ty->u.name.ty;
 	while(actual->kind == Ty_name) {
-		ty->u.name.ty = S_look(tenv, actual->u.name.sym);
 		actual = actual->u.name.ty;
 		if (ty == actual)
 			return 1;
