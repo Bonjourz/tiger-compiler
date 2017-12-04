@@ -52,7 +52,7 @@ F_frame F_newFrame(Temp_label l, U_boolList formals) {
 	for (; formals; formals = formals->tail) {
 		/* escape */
 		f->argSize++;
-		if (formals->head)
+		if (!formals->head)
 			a = F_AccessList(InReg(Temp_newtemp()), a);
 
 		else {
@@ -75,7 +75,7 @@ F_accessList F_formals(F_frame f) {
 
 F_access F_allocLocal(F_frame f, bool escape) {
 	F_access a = NULL;
-	if (escape) {
+	if (!escape) {
 		Temp_temp r = Temp_newtemp();
 		a = InReg(r);
 	}
@@ -157,16 +157,23 @@ T_exp F_externalCall(string s, T_expList args) {
 	return T_Call(T_Name(Temp_namedlabel(s)), args);
 }
 
-static Temp_temp rv = NULL;
+static Temp_temp eax = NULL;
+static Temp_temp ebx = NULL;
+static Temp_temp ecx = NULL;
+static Temp_temp esi = NULL;
+static Temp_temp edi = NULL;
+static Temp_temp eci = NULL;
+static Temp_temp ebp = NULL;
+static Temp_temp esp = NULL;
+
 T_exp F_RV() {
-	if (!rv)
-		rv = Temp_newtemp();
-	return T_Temp(rv);
+	if (!eax)
+		eax = Temp_newtemp();
+	return T_Temp(eax);
 }
 
-static Temp_temp fp = NULL;
 T_exp F_FP() {
-	if (!fp)
-		fp = Temp_newtemp();
-	return T_Temp(fp);
+	if (!ebp)
+		ebp = Temp_newtemp();
+	return T_Temp(ebp);
 }

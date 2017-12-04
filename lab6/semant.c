@@ -264,8 +264,11 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level cur_l, Temp_
 			A_expList seq = a->u.seq;
 			int count = 0; // need to delete
 			for (; seq; seq = seq->tail) {
-				r = transExp(venv, tenv, seq->head, cur_l, breakl);
+				struct expty tmp = transExp(venv, tenv, seq->head, cur_l, breakl);
+				r.exp = Tr_SeqExp(r.exp, tmp.exp);
+				r.ty = tmp.ty;
 				//printf("seq exp %d\n", count++);
+				//transExp(venv, tenv, seq->head, cur_l, breakl);
 			}
 
 			return r;
@@ -346,7 +349,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level cur_l, Temp_
 			S_beginScope(venv);
 	    	/* The id defined by for should be read-only */
 			Temp_label done = Temp_newlabel();
-			Tr_access acc = Tr_allocLocal(cur_l, 1);
+			Tr_access acc = Tr_allocLocal(cur_l, FALSE);
 			S_enter(venv, a->u.forr.var, E_ROVarEntry(acc, Ty_Int()));
 			struct expty body = transExp(venv, tenv, a->u.forr.body, cur_l, done);
 			S_endScope(venv);
