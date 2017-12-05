@@ -11,6 +11,7 @@
 #include "codegen.h"
 #include "table.h"
 
+#define STRLEN 20
 //Lab 6: put your code here
 static Temp_temp munchExp(T_exp e);
 static void munchStm(T_stm s);
@@ -18,14 +19,11 @@ static void munchStm(T_stm s);
 static AS_instrList iList = NULL, last = NULL;
 
 static void emit(AS_instr inst) {
-	if (last != NULL) {
-		last->tail = AS_InstrList(inst, NULL);
-		last = last->tail;
-	}
-	else {
-		iList = AS_InstrList(inst, NULL);
-		last = iList;
-	}
+	if (last != NULL) 
+    	last = last->tail = AS_InstrList(inst, NULL);
+  	else 
+    	last = iList = AS_InstrList(inst, NULL);
+  
 }
 
 static Temp_tempList L(Temp_temp h, Temp_tempList t) {
@@ -35,7 +33,7 @@ static Temp_tempList L(Temp_temp h, Temp_tempList t) {
 AS_instrList F_codegen(F_frame f, T_stmList stmList) {
 	AS_instrList list;
 	T_stmList sl;
-	// ...
+	// TO DO: caller save and callee save
 	for (sl = stmList; sl; sl = sl->tail)
 		munchStm(sl->head);
 	list = iList;
@@ -47,7 +45,8 @@ static Temp_temp emitBinOp(T_exp left, T_exp right, T_binOp op) {
 	Temp_temp tmp = Temp_newtemp();
 	Temp_temp l = munchExp(left);
 	Temp_temp r =  munchExp(right);
-	char out[20];
+	char* out1 = (char *)checked_malloc(STRLEN);
+	char* out2 = (char *)checked_malloc(STRLEN);
 	char* str;
 	switch(op) {
 		case T_plus: {str = "addl"; break;}
@@ -62,10 +61,10 @@ static Temp_temp emitBinOp(T_exp left, T_exp right, T_binOp op) {
 		case T_xor:
 			assert(0);
 	}
-	sprintf(out, "movl `s0 `d0\n");
-	emit(AS_Oper(out, L(tmp, NULL), L(l, NULL), NULL));
-	sprintf(out, "%s `s0, `d0\n", str);
-	emit(AS_Oper(out, L(tmp, NULL), L(r, L(tmp, NULL)), NULL));
+	sprintf(out1, "movl `s0, `d0");
+	emit(AS_Oper(out1, L(tmp, NULL), L(l, NULL), NULL));
+	sprintf(out2, "%s `s0, `d0", str);
+	emit(AS_Oper(out2, L(tmp, NULL), L(r, L(tmp, NULL)), NULL));
 	return tmp;
 }
 
@@ -82,7 +81,6 @@ static Temp_tempList munchArgs(T_expList args) {
 }
 
 static Temp_temp munchExp(T_exp e) {
-	char out[30];
 	switch(e->kind) {
 		case T_BINOP: {
 			//printf("binop\n");
@@ -93,10 +91,12 @@ static Temp_temp munchExp(T_exp e) {
 						// binop(+, const, const)
 						Temp_temp tmp = Temp_newtemp();
 						int lv = e->u.BINOP.left->u.CONST, rv = e->u.BINOP.right->u.CONST;
-						sprintf(out, "movl $%d, `d0\n", lv);
-						emit(AS_Oper(out, L(tmp, NULL), NULL, NULL));
-						sprintf(out, "addl $%d, `d0\n", rv);
-						emit(AS_Oper(out, L(tmp, NULL), L(tmp, NULL), NULL));
+						char* out1 = (char*)checked_malloc(STRLEN);
+						char* out2 = (char*)checked_malloc(STRLEN);
+						sprintf(out1, "movl $%d, `d0", lv);
+						emit(AS_Oper(out1, L(tmp, NULL), NULL, NULL));
+						sprintf(out2, "addl $%d, `d0", rv);
+						emit(AS_Oper(out2, L(tmp, NULL), L(tmp, NULL), NULL));
 						return tmp;
 					}
 
@@ -105,10 +105,12 @@ static Temp_temp munchExp(T_exp e) {
 						int i = e->u.BINOP.left->u.CONST;
 						Temp_temp tmp = Temp_newtemp();
 						Temp_temp r = munchExp(e->u.BINOP.right);
-						sprintf(out, "movl `s0, `d0\n");
-						emit(AS_Oper(out, L(tmp, NULL), L(r, NULL), NULL));
-						sprintf(out, "addl $%d, `d0\n", i);
-						emit(AS_Oper(out, L(tmp, NULL), L(tmp, NULL), NULL));
+						char* out1 = (char*)checked_malloc(STRLEN);
+						char* out2 = (char*)checked_malloc(STRLEN);
+						sprintf(out1, "movl `s0, `d0");
+						emit(AS_Oper(out1, L(tmp, NULL), L(r, NULL), NULL));
+						sprintf(out2, "addl $%d, `d0", i);
+						emit(AS_Oper(out2, L(tmp, NULL), L(tmp, NULL), NULL));
 						return tmp;
 					}
 
@@ -117,14 +119,16 @@ static Temp_temp munchExp(T_exp e) {
 						int i = e->u.BINOP.right->u.CONST;
 						Temp_temp tmp = Temp_newtemp();
 						Temp_temp l = munchExp(e->u.BINOP.left);
-						sprintf(out, "movl `s0, `d0\n");
-						emit(AS_Oper(out, L(tmp, NULL), L(l, NULL), NULL));
-						sprintf(out, "addl $%d, `d0\n", i);
-						emit(AS_Oper(out, L(tmp, NULL), L(tmp, NULL), NULL));
+						char* out1 = (char*)checked_malloc(STRLEN);
+						char* out2 = (char*)checked_malloc(STRLEN);
+						sprintf(out1, "movl `s0, `d0");
+						emit(AS_Oper(out1, L(tmp, NULL), L(l, NULL), NULL));
+						sprintf(out2, "addl $%d, `d0", i);
+						emit(AS_Oper(out2, L(tmp, NULL), L(tmp, NULL), NULL));
 						return tmp;
 					}
 
-					else
+					else 
 						return emitBinOp(e->u.BINOP.left, e->u.BINOP.right, op);
 				}
 
@@ -133,13 +137,15 @@ static Temp_temp munchExp(T_exp e) {
 						Temp_temp l = munchExp(e->u.BINOP.left);
 						Temp_temp tmp = Temp_newtemp();
 						int i = e->u.BINOP.right->u.CONST;
-						sprintf(out, "movl `s0, `d0\n");
-						emit(AS_Oper(out, L(tmp, NULL), L(l, NULL), NULL));
-						sprintf(out, "subl $%d, `d0\n", i);
-						emit(AS_Oper(out, L(tmp, NULL), L(tmp, NULL), NULL));
+						char* out1 = (char*)checked_malloc(STRLEN);
+						char* out2 = (char*)checked_malloc(STRLEN);
+						sprintf(out1, "movl `s0, `d0");
+						emit(AS_Oper(out1, L(tmp, NULL), L(l, NULL), NULL));
+						sprintf(out2, "subl $%d, `d0", i);
+						emit(AS_Oper(out2, L(tmp, NULL), L(tmp, NULL), NULL));
 						return tmp;
 					}
-					else
+					else 
 						return emitBinOp(e->u.BINOP.left, e->u.BINOP.right, op);
 				}
 
@@ -148,10 +154,12 @@ static Temp_temp munchExp(T_exp e) {
 						// BINOP(T_mul, CONST, CONST);
 						Temp_temp tmp = Temp_newtemp();
 						int lv = e->u.BINOP.left->u.CONST, rv = e->u.BINOP.right->u.CONST;
-						sprintf(out, "movl $%d, `d0\n", lv);
-						emit(AS_Oper(out, L(tmp, NULL), NULL, NULL));
-						sprintf(out, "imul $%d, `d0\n", rv);
-						emit(AS_Oper(out, L(tmp, NULL), L(tmp, NULL), NULL));
+						char* out1 = (char*)checked_malloc(STRLEN);
+						char* out2 = (char*)checked_malloc(STRLEN);
+						sprintf(out1, "movl $%d, `d0", lv);
+						emit(AS_Oper(out1, L(tmp, NULL), NULL, NULL));
+						sprintf(out2, "imul $%d, `d0", rv);
+						emit(AS_Oper(out2, L(tmp, NULL), L(tmp, NULL), NULL));
 						return tmp;
 					}
 
@@ -160,10 +168,12 @@ static Temp_temp munchExp(T_exp e) {
 						int i = e->u.BINOP.left->u.CONST;
 						Temp_temp tmp = Temp_newtemp();
 						Temp_temp r = munchExp(e->u.BINOP.right);
-						sprintf(out, "movl `s0, `d0\n");
-						emit(AS_Oper(out, L(tmp, NULL), L(r, NULL), NULL));
-						sprintf(out, "imul $%d, `d0\n", i);
-						emit(AS_Oper(out, L(tmp, NULL), L(tmp, NULL), NULL));
+						char* out1 = (char*)checked_malloc(STRLEN);
+						char* out2 = (char*)checked_malloc(STRLEN);
+						sprintf(out1, "movl `s0, `d0");
+						emit(AS_Oper(out1, L(tmp, NULL), L(r, NULL), NULL));
+						sprintf(out2, "imul $%d, `d0", i);
+						emit(AS_Oper(out2, L(tmp, NULL), L(tmp, NULL), NULL));
 						return tmp;
 					}
 
@@ -172,20 +182,20 @@ static Temp_temp munchExp(T_exp e) {
 						int i = e->u.BINOP.right->u.CONST;
 						Temp_temp tmp = Temp_newtemp();
 						Temp_temp l = munchExp(e->u.BINOP.left);
-						sprintf(out, "movl `s0, `d0\n");
-						emit(AS_Oper(out, L(tmp, NULL), L(l, NULL), NULL));
-						sprintf(out, "imul $%d, `d0\n", i);
-						emit(AS_Oper(out, L(tmp, NULL), L(tmp, NULL), NULL));
+						char* out1 = (char*)checked_malloc(STRLEN);
+						char* out2 = (char*)checked_malloc(STRLEN);
+						sprintf(out1, "movl `s0, `d0");
+						emit(AS_Oper(out1, L(tmp, NULL), L(l, NULL), NULL));
+						sprintf(out2, "imul $%d, `d0", i);
+						emit(AS_Oper(out2, L(tmp, NULL), L(tmp, NULL), NULL));
 						return tmp;
 					}
-					else
+					else 
 						return emitBinOp(e->u.BINOP.left, e->u.BINOP.right, op);
 				}
 
-				case T_div: {
-					// TO DO
+				case T_div: 
 					return emitBinOp(e->u.BINOP.left, e->u.BINOP.right, op);
-				}
 
 				case T_and:
 				case T_or:
@@ -207,7 +217,8 @@ static Temp_temp munchExp(T_exp e) {
 					int i = binexp->u.BINOP.right->u.CONST;
 					if (binexp->u.BINOP.op == T_minus) 
 						i = -i;
-					sprintf(out, "movl %d(`s0), `d0\n", i);
+					char* out = (char*)checked_malloc(STRLEN);
+					sprintf(out, "movl %d(`s0), `d0", i);
 					emit(AS_Oper(out, L(tmp, NULL), L(l, NULL), NULL));
 					return tmp;
 				}
@@ -216,7 +227,8 @@ static Temp_temp munchExp(T_exp e) {
 					// MEM(BINOP(+, CONST, e))
 					Temp_temp r = munchExp(binexp->u.BINOP.right), tmp = Temp_newtemp();
 					int i = binexp->u.BINOP.left->u.CONST;
-					sprintf(out, "movl %d(`s0), `d0\n", i);
+					char* out = (char*)checked_malloc(STRLEN);
+					sprintf(out, "movl %d(`s0), `d0", i);
 					emit(AS_Oper(out, L(tmp, NULL), L(r, NULL), NULL));
 					return tmp;
 				}
@@ -225,14 +237,16 @@ static Temp_temp munchExp(T_exp e) {
 			else if (e->u.MEM->kind == T_CONST) {
 				Temp_temp tmp = Temp_newtemp();
 				int i = e->u.MEM->u.CONST;
-				sprintf(out, "movl %d, `d0\n", i);
+				char* out = (char*)checked_malloc(STRLEN);
+				sprintf(out, "movl %d, `d0", i);
 				emit(AS_Oper(out, L(tmp, NULL), NULL, NULL));
 				return tmp;
 			}
 
 			/* Default */
 			Temp_temp tmp = Temp_newtemp(), r = munchExp(e->u.MEM);
-			sprintf(out, "movl (`s0), `d0\n");
+			char* out = (char*)checked_malloc(STRLEN);
+			sprintf(out, "movl (`s0), `d0");
 			emit(AS_Oper(out, L(tmp, NULL), L(r, NULL), NULL));
 			return tmp;
 		}
@@ -252,6 +266,7 @@ static Temp_temp munchExp(T_exp e) {
 		case T_NAME: {
 			//printf("name\n");
 			Temp_temp tmp = Temp_newtemp();
+			char* out = (char*)checked_malloc(STRLEN);
 			sprintf(out, "movl $.%s, `d0", Temp_labelstring(e->u.NAME));
 			// TO DO: src ??
 			emit(AS_Oper(out, L(tmp, NULL), NULL, NULL));
@@ -261,6 +276,7 @@ static Temp_temp munchExp(T_exp e) {
 		case T_CONST: {
 			//printf("const\n");
 			Temp_temp tmp = Temp_newtemp();
+			char* out = (char*)checked_malloc(STRLEN);
 			sprintf(out, "movl $%d, `d0", e->u.CONST);
 			emit(AS_Oper(out, L(tmp, NULL), NULL, NULL));
 			return tmp;
@@ -271,7 +287,8 @@ static Temp_temp munchExp(T_exp e) {
 			// TO DO: src and dst
 			Temp_temp r = munchExp(e->u.CALL.fun);
 			Temp_tempList l = munchArgs(e->u.CALL.args);
-			sprintf(out, "call %s\n", Temp_labelstring(e->u.CALL.fun->u.NAME));
+			char* out = (char*)checked_malloc(STRLEN);
+			sprintf(out, "call %s", Temp_labelstring(e->u.CALL.fun->u.NAME));
 			// TO DO
 			Temp_tempList calldefs = NULL;
 			emit(AS_Oper(out, calldefs, L(r, l), NULL));
@@ -281,7 +298,6 @@ static Temp_temp munchExp(T_exp e) {
 }
 
 static void munchStm(T_stm s) {
-	char out[30];
 	switch(s->kind) {
 		case T_MOVE: {
 			//printf("move\n");
@@ -296,7 +312,8 @@ static void munchStm(T_stm s) {
 					i = -i;
 				Temp_temp dst = munchExp(s->u.MOVE.dst->u.MEM->u.BINOP.left);
 				Temp_temp src = munchExp(s->u.MOVE.src);
-				sprintf(out, "movl `s0, %d(`d0)\n", i);
+				char* out = (char*)checked_malloc(STRLEN);
+				sprintf(out, "movl `s0, %d(`d0)", i);
 				emit(AS_Oper(out, L(dst, NULL), L(src, NULL), NULL));
 				return;
 			}
@@ -309,7 +326,8 @@ static void munchStm(T_stm s) {
 				int i = s->u.MOVE.dst->u.MEM->u.BINOP.left->u.CONST;
 				Temp_temp dst = munchExp(s->u.MOVE.dst->u.MEM->u.BINOP.right);
 				Temp_temp src = munchExp(s->u.MOVE.src);
-				sprintf(out, "movl `s0, %d(`d0)\n", i);
+				char* out = (char*)checked_malloc(STRLEN);
+				sprintf(out, "movl `s0, %d(`d0)", i);
 				emit(AS_Oper(out, L(dst, NULL), L(src, NULL), NULL));
 				return;
 			}
@@ -325,7 +343,8 @@ static void munchStm(T_stm s) {
 					i = -i;
 				Temp_temp dst = munchExp(s->u.MOVE.dst);
 				Temp_temp src = munchExp(s->u.MOVE.src->u.MEM->u.BINOP.left);
-				sprintf(out, "movl %d(`s0), `d0\n", i);
+				char* out = (char*)checked_malloc(STRLEN);
+				sprintf(out, "movl %d(`s0), `d0", i);
 				emit(AS_Oper(out, L(dst, NULL), L(src, NULL), NULL));
 				return;
 			}
@@ -338,7 +357,8 @@ static void munchStm(T_stm s) {
 				int i = s->u.MOVE.src->u.MEM->u.BINOP.left->u.CONST;
 				Temp_temp dst = munchExp(s->u.MOVE.dst);
 				Temp_temp src = munchExp(s->u.MOVE.src->u.MEM->u.BINOP.right);
-				sprintf(out, "movl %d(`s0), `d0\n", i);
+				char* out = (char*)checked_malloc(STRLEN);
+				sprintf(out, "movl %d(`s0), `d0", i);
 				emit(AS_Oper(out, L(dst, NULL), L(src, NULL), NULL));
 				return;
 			}
@@ -348,7 +368,8 @@ static void munchStm(T_stm s) {
 				// move(e1, mem(const(i)))
 				int i = s->u.MOVE.src->u.MEM->u.CONST;
 				Temp_temp dst = munchExp(s->u.MOVE.dst);
-				sprintf(out, "movl %d, `d0\n", i);
+				char* out = (char*)checked_malloc(STRLEN);
+				sprintf(out, "movl %d, `d0", i);
 				emit(AS_Oper(out, L(dst, NULL), NULL, NULL));
 				return;
 			}
@@ -357,7 +378,8 @@ static void munchStm(T_stm s) {
 				// move(e1, mem(e2))
 				Temp_temp src = munchExp(s->u.MOVE.src->u.MEM);
 				Temp_temp dst = munchExp(s->u.MOVE.dst);
-				sprintf(out, "movl (`s0), `d0\n");
+				char* out = (char*)checked_malloc(STRLEN);
+				sprintf(out, "movl (`s0), `d0");
 				emit(AS_Oper(out, L(dst, NULL), L(src, NULL), NULL));
 				return;
 			}
@@ -366,7 +388,8 @@ static void munchStm(T_stm s) {
 				// move(e2, mem(e1))
 				Temp_temp src = munchExp(s->u.MOVE.src);
 				Temp_temp dst = munchExp(s->u.MOVE.dst->u.MEM);
-				sprintf(out, "movl `s0, (`d0)\n");
+				char* out = (char*)checked_malloc(STRLEN);
+				sprintf(out, "movl `s0, (`d0)");
 				emit(AS_Oper(out, L(dst, NULL), L(src, NULL), NULL));
 				return;
 			}
@@ -375,15 +398,33 @@ static void munchStm(T_stm s) {
 				// move(e1, const(i))
 				int i = s->u.MOVE.src->u.CONST;
 				Temp_temp dst = munchExp(s->u.MOVE.dst);
-				sprintf(out, "movl $%d, `d0\n", i);
+				char* out = (char*)checked_malloc(STRLEN);
+				sprintf(out, "movl $%d, `d0", i);
 				emit(AS_Oper(out, L(dst, NULL), NULL, NULL));
 				return;
+			}
+
+			else if (s->u.MOVE.dst->kind == T_TEMP &&
+				s->u.MOVE.src->kind == T_BINOP &&
+				s->u.MOVE.src->u.BINOP.left->kind == T_TEMP &&
+				s->u.MOVE.src->u.BINOP.left->u.TEMP == s->u.MOVE.dst->u.TEMP &&
+				s->u.MOVE.src->u.BINOP.right->kind == T_CONST) {
+				/* for loop
+				**  move(temp a,binop(+, temp a, const 1))
+				*/
+				int i = s->u.MOVE.src->u.BINOP.right->u.CONST;
+				Temp_temp r =  s->u.MOVE.dst->u.TEMP;
+				char* out = (char *)checked_malloc(STRLEN);
+				sprintf(out, "addl $%d, `d0", i);
+				emit(AS_Oper(out, L(r, NULL), NULL, NULL));
+				return; 
 			}
 
 			else {
 				Temp_temp src = munchExp(s->u.MOVE.src);
 				Temp_temp dst = munchExp(s->u.MOVE.dst);
-				sprintf(out, "movl `s0, `d0\n");
+				char* out = (char*)checked_malloc(STRLEN);
+				sprintf(out, "movl `s0, `d0");
 				emit(AS_Move(out, L(dst, NULL), L(src, NULL)));
 				return;
 			}
@@ -394,8 +435,9 @@ static void munchStm(T_stm s) {
 		}
 
 		case T_LABEL: {
-			//printf("label\n");
-			sprintf(out, "%s:\n", Temp_labelstring(s->u.LABEL));
+			char* out = (char*)checked_malloc(STRLEN);
+			sprintf(out, "%s", Temp_labelstring(s->u.LABEL));
+			//printf("%s\n", out);
 			emit(AS_Label(out, s->u.LABEL));
 			return;
 		}
@@ -403,9 +445,9 @@ static void munchStm(T_stm s) {
 		case T_JUMP: {
 			//printf("jump\n");
 			Temp_label label = s->u.JUMP.exp->u.NAME;
-			printf("%s\n", Temp_labelstring(label));
-			sprintf(out, "jmp %s\n", Temp_labelstring(label));
-			emit(AS_Label(out, AS_Targets(s->u.JUMP.jumps)));
+			char* out = (char*)checked_malloc(STRLEN);
+			sprintf(out, "jmp %s", Temp_labelstring(label));
+			emit(AS_Oper(out, NULL, NULL, AS_Targets(s->u.JUMP.jumps)));
 			return;
 		}
 
@@ -428,10 +470,12 @@ static void munchStm(T_stm s) {
 			}
 			Temp_temp l = munchExp(s->u.CJUMP.left);
 			Temp_temp r = munchExp(s->u.CJUMP.right);
-			sprintf(out, "cmp `s0`, `s1`\n");
-			emit(AS_Oper(out, NULL, L(r, L(r, NULL)), NULL));
-			sprintf(out, "%s %s\n", str, Temp_labelstring(s->u.CJUMP.true));
-			emit(AS_Oper(out, NULL, NULL, AS_Targets(Temp_LabelList(s->u.CJUMP.true, NULL))));
+			char* out1 = (char*)checked_malloc(STRLEN);
+			sprintf(out1, "cmp `s0, `s1");
+			emit(AS_Oper(out1, NULL, L(l, L(r, NULL)), NULL));
+			char* out2 = (char*)checked_malloc(STRLEN);
+			sprintf(out2, "%s %s", str, Temp_labelstring(s->u.CJUMP.true));
+			emit(AS_Oper(out2, NULL, NULL, AS_Targets(Temp_LabelList(s->u.CJUMP.true, NULL))));
 			return;
 		}
 
