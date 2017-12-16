@@ -34,6 +34,8 @@ struct F_frame_{
 	Temp_tempList calleesaves;
 	Temp_tempList callersaves;
 	Temp_tempList specialregs;
+
+	Temp_map F_tempMap;
 };
 
 F_frame F_newFrame(Temp_label l, U_boolList formals) {
@@ -46,22 +48,34 @@ F_frame F_newFrame(Temp_label l, U_boolList formals) {
 	f->callersaves = NULL;
 	f->calleesaves = NULL;
 	f->specialregs = NULL;
+	f->F_tempMap = Temp_name();
 
-	F_accessList a = NULL;
-	int offset = 0;
+	F_accessList aHead = NULL, aTail = NULL;
+	F_access a = NULL;
+	int offset = 3;
 	for (; formals; formals = formals->tail) {
-		/* escape */
 		f->argSize++;
+		/* escape */
 		if (!formals->head)
-			a = F_AccessList(InReg(Temp_newtemp()), a);
+			a = InReg(Temp_newtemp());
 
 		else {
-			a = F_AccessList(InFrame(offset * F_wordSize), a);
+			a = InFrame(offset * F_wordSize);
 			offset++;
+		}
+
+		if (aHead == NULL) {
+			aHead = F_AccessList(a, NULL);
+			aTail = aHead;
+		}
+
+		else {
+			aTail->tail = F_AccessList(a, NULL);
+			aTail = aTail->tail;
 		}
 	}
 
-	f->formals = a;
+	f->formals = aHead;
 	return f;
 }
 
@@ -153,6 +167,11 @@ T_exp F_Exp(F_access acc, T_exp framePtr) {
 		return T_Temp(acc->u.reg);
 }
 
+int F_makeSpill(F_frame f) {
+	f->f_cnt++;
+	return f->f_cnt;
+}
+
 T_exp F_externalCall(string s, T_expList args) {
 	return T_Call(T_Name(Temp_namedlabel(s)), args);
 }
@@ -160,20 +179,119 @@ T_exp F_externalCall(string s, T_expList args) {
 static Temp_temp eax = NULL;
 static Temp_temp ebx = NULL;
 static Temp_temp ecx = NULL;
+static Temp_temp edx = NULL;
 static Temp_temp esi = NULL;
 static Temp_temp edi = NULL;
-static Temp_temp eci = NULL;
 static Temp_temp ebp = NULL;
 static Temp_temp esp = NULL;
 
-T_exp F_RV() {
-	if (!eax)
-		eax = Temp_newtemp();
-	return T_Temp(eax);
+static void initMachineReg() {
+	eax = Temp_newtemp();
+	ebx = Temp_newtemp();
+	ecx = Temp_newtemp();
+	edx = Temp_newtemp();
+	esi = Temp_newtemp();
+	edi = Temp_newtemp();
+	ebp = Temp_newtemp();
+	esp = Temp_newtemp();
 }
 
-T_exp F_FP() {
-	if (!ebp)
-		ebp = Temp_newtemp();
-	return T_Temp(ebp);
+Temp_temp F_RV() {
+	if (!eax)
+		initMachineReg();
+	return eax;
 }
+
+Temp_temp F_FP() {
+	if (!ebp)
+		initMachineReg();
+	return ebp;
+}
+
+Temp_temp F_EAX() {
+	if (!eax)
+		initMachineReg();
+	return eax;
+}
+
+Temp_temp F_EBX() {
+	if (!ebx)
+		initMachineReg();
+	return ebx;
+}
+
+Temp_temp F_ECX() {
+	if (!ecx)
+		initMachineReg();
+	return ecx;
+}
+
+Temp_temp F_EDX() {
+	if (!edx)
+		initMachineReg();
+	return edx;
+}
+
+Temp_temp F_EDI() {
+	if (!edi)
+		initMachineReg();
+	return edi;
+}
+
+Temp_temp F_ESI() {
+	if (!esi)
+		initMachineReg();
+	return esi;
+}
+
+Temp_temp F_EBP() {
+	if (!ebp)
+		initMachineReg();
+	return ebp;
+}
+
+
+Temp_temp F_ESP() {
+	if (!esp)
+		initMachineReg();
+	return esp;
+}
+
+void initTempMap(Temp_map temMap) {
+	Temp_enter(temMap, F_RV(), "%eax");
+	Temp_enter(temMap, F_FP(), "%ebp");
+	Temp_enter(temMap, F_EAX(), "%eax");
+	Temp_enter(temMap, F_EBX(), "%ebx");
+	Temp_enter(temMap, F_ECX(), "%ecx");
+	Temp_enter(temMap, F_EDX(), "%edx");
+	Temp_enter(temMap, F_EDI(), "%edi");
+	Temp_enter(temMap, F_ESI(), "%esi");
+	Temp_enter(temMap, F_EBP(), "%ebp");
+	Temp_enter(temMap, F_ESP(), "%esp");
+}
+
+int F_paraNum(F_frame f) {
+	return f->argSize;
+}
+
+
+AS_proc F_procEntryExit3(F_frame f, AS_instrList body) {
+	char *prologue = (char *)checked_malloc(100);
+	char *epilogue = (char *)checked_malloc(100);
+	sprintf(prologue, "push %%ebp\n");
+	sprintf(prologue, "%smovl %%esp, %%ebp\n", prologue);
+	sprintf(prologue, "%ssubl $%d, %%esp\n", prologue, f->f_cnt * F_wordSize);
+	sprintf(prologue, "%spushl %%edx\n", prologue);
+	sprintf(prologue, "%spushl %%edi\n", prologue);
+	sprintf(prologue, "%spushl %%esi\n", prologue);
+
+	sprintf(epilogue, "popl %%esi\n");
+	sprintf(epilogue, "%spopl %%edi\n", epilogue);
+	sprintf(epilogue, "%spopl %%edx\n", epilogue);
+	sprintf(epilogue, "%saddl $%d, %%esp\n", epilogue, f->f_cnt * F_wordSize);
+	sprintf(epilogue, "%spopl %%ebp\n", epilogue);
+	sprintf(epilogue, "%sret\n", epilogue);
+
+	return AS_Proc(prologue, body, epilogue);
+}
+

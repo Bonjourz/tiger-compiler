@@ -206,10 +206,10 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level cur_l, Temp_
 				case A_gtOp:
 				case A_geOp:{
 					if (left.ty->kind == Ty_int && right.ty->kind == Ty_int)
-						return expTy(Tr_CmpOp(oper, left.exp, right.exp, 1), Ty_Int());
+						return expTy(Tr_CmpOp(oper, left.exp, right.exp, 0), Ty_Int());
 
 					else if (left.ty->kind == Ty_string && right.ty->kind == Ty_string)
-						return expTy(Tr_CmpOp(oper, left.exp, right.exp, 0), Ty_Int());
+						return expTy(Tr_CmpOp(oper, left.exp, right.exp, 1), Ty_Int());
 
 					else {
 						EM_error(a->pos, "same type required");
@@ -372,20 +372,20 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level cur_l, Temp_
 		case A_letExp: {
 			// TO DO: the result of transdec
 			struct expty exp;
-			Tr_exp decExp = Tr_NullExp();
+			Tr_expList decl = NULL;
 			A_decList d;
 			S_beginScope(venv);
 			S_beginScope(tenv);
 			//int count = 0; //delete
 			for (d = a->u.let.decs; d; d = d->tail) {
 				Tr_exp ele = transDec(venv, tenv, d->head, cur_l, breakl);
-				decExp = Tr_LetExp(ele, decExp);
+				decl = Tr_ExpList(ele, decl);
 				//printf("let count %d\n", count++);
 			}
 
 			//printf("letexp\n");
 			exp = transExp(venv, tenv, a->u.let.body, cur_l, breakl);
-			Tr_exp r = Tr_LetExp(decExp, exp.exp);
+			Tr_exp r = Tr_LetExp(decl, exp.exp);
 			S_endScope(tenv);
 			S_endScope(venv);
 			return expTy(r, exp.ty);
@@ -447,8 +447,9 @@ Tr_exp transDec(S_table venv, S_table tenv, A_dec d, Tr_level cur_l, Temp_label 
 				E_enventry e = S_look(venv, f->name);
 				Tr_level new_l = e->u.fun.level;
 				Tr_accessList acc_l = Tr_TrLevelVar(new_l);
-				for (l = f->params; l && acc_l; l = l->tail, acc_l = acc_l->tail)
+				for (l = f->params; l && acc_l; l = l->tail, acc_l = acc_l->tail) 
 					S_enter(venv, l->head->name, E_VarEntry(acc_l->head, actual_ty(S_look(tenv, l->head->typ))));
+				
 
 				struct expty body = transExp(venv, tenv, f->body, new_l, breakl);
 				if (body.ty->kind != Ty_void && f->result == S_Symbol(""))

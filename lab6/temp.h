@@ -32,4 +32,10 @@ void Temp_dumpMap(FILE *out, Temp_map m);
 
 Temp_map Temp_name(void);
 
+Temp_tempList unionTempList(Temp_tempList a, Temp_tempList b);
+Temp_tempList sub(Temp_tempList a, Temp_tempList b);
+bool findTempFromList(Temp_temp tmp, Temp_tempList l);
+bool duplicate(Temp_tempList l);
+bool same(Temp_tempList a, Temp_tempList b);
+
 #endif

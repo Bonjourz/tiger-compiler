@@ -7,7 +7,6 @@
 #include "frame.h"
 
 /* Lab5: your code below */
-
 typedef struct Tr_exp_ *Tr_exp;
 typedef struct Tr_expList_ *Tr_expList;
 struct Tr_expList_ {Tr_exp head; Tr_expList tail;};
@@ -51,7 +50,7 @@ Tr_exp Tr_IfExp(Tr_exp test, Tr_exp then, Tr_exp elsee);
 Tr_exp Tr_WhileExp(Tr_exp test, Tr_exp body, Temp_label done) ;
 Tr_exp Tr_ForExp(Tr_exp lo, Tr_exp hi, Tr_exp body, Temp_label done, Tr_access acc);
 Tr_exp Tr_BreakExp(Temp_label breakl);
-Tr_exp Tr_LetExp(Tr_exp head, Tr_exp tail);
+Tr_exp Tr_LetExp(Tr_expList decl, Tr_exp body);
 Tr_exp Tr_ArrayExp(Tr_exp size, Tr_exp init);
 
 Tr_exp Tr_SimpleVar(Tr_access acc, Tr_level cur_l);

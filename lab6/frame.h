@@ -5,6 +5,7 @@
 #define FRAME_H
 
 #include "tree.h"
+#include "assem.h"
 
 extern const int F_wordSize;
 
@@ -45,7 +46,24 @@ F_fragList F_FragList(F_frag head, F_fragList tail);
 
 T_exp F_Exp(F_access acc, T_exp framPtr);
 T_exp F_externalCall(string s, T_expList args);
-T_exp F_FP(void);
-T_exp F_RV(void);
+Temp_temp F_FP(void);
+Temp_temp F_RV(void);
+Temp_temp F_EAX(void);
+Temp_temp F_EBX(void);
+Temp_temp F_ECX(void);
+Temp_temp F_EDX(void);
+Temp_temp F_EDI(void);
+Temp_temp F_ESI(void);
+Temp_temp F_EBP(void);
+Temp_temp F_ESP(void);
+
+void initTempMap(Temp_map temMap);
+
+int F_makeSpill(F_frame f);
+int F_paraNum(F_frame f);
+
+AS_instrList F_procEntryExit2(AS_instrList body);
+
+AS_proc F_procEntryExit3(F_frame f, AS_instrList body);
 
 #endif

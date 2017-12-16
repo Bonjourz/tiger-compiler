@@ -27,6 +27,10 @@ struct G_node_ {
   void *info;
 };
 
+int G_key(G_node n) {
+  return n->mykey;
+}
+
 G_graph G_Graph(void)
 {G_graph g = (G_graph) checked_malloc(sizeof *g);
  g->nodecount = 0;
@@ -165,6 +169,29 @@ void G_enter(G_table t, G_node node, void *value)
 void *G_look(G_table t, G_node node)
 {
   return TAB_look(t, node);
+}
+
+G_nodeList G_nodesLast(G_graph g) {
+  return g->mylast;
+}
+
+G_nodeList G_subNodeFromList(G_node n, G_nodeList l) {
+  if (!l) 
+    return NULL;
+
+  G_nodeList result = G_NodeList(NULL, l);
+  l = result;
+
+  for (; l->tail; l = l->tail) {
+    if (l->tail->head == n) {
+      l->tail = l->tail->tail;
+      if (l->tail == NULL)
+        break;
+      //return result;
+    }
+  }
+  
+  return result->tail;
 }
 
 

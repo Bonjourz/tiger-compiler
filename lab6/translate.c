@@ -11,7 +11,6 @@
 #include "errormsg.h"
 
 //LAB5: you can modify anything you want.
-
 struct Tr_access_ {
 	Tr_level level;
 	F_access access;
@@ -27,7 +26,7 @@ static Tr_level tr_outermost = NULL;
 
 Tr_level Tr_outermost() {
 	if (!tr_outermost)
-		tr_outermost = Tr_newLevel(NULL, S_Symbol("main"), NULL);
+		tr_outermost = Tr_newLevel(NULL, S_Symbol("tigermain"), NULL);
 
 	return tr_outermost;
 }
@@ -234,18 +233,23 @@ static struct Cx unCx(Tr_exp e) {
 }
 
 void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals) {
-	//printf("exit1\n");
-	F_frag f = F_ProcFrag(unNx(body), level->frame);
+	//T_stm stm = T_Exp(unEx(body));
+	//printStmList(stdout, T_StmList(stm, NULL));
+	//printf("fuck\n");
+	T_stm stm = T_Move(T_Temp(F_RV()), unEx(body));
+	F_frag f = F_ProcFrag(stm, level->frame);
 	//printf("exit2\n");
 	frag_list = F_FragList(f, frag_list);
 }
 
 static T_exp makeStaticLink(Tr_level cur, Tr_level dst) {
-	// TO DO: static link is in %ebp+4 or %ebp, here is %ebp
-	T_exp sl = F_FP();
+	if (dst == NULL) 
+		return NULL;
+
+	T_exp sl = T_Temp(F_FP());
 	// TO DO: if cur == NULL ??
 	while (cur && cur != dst) {
-		sl = T_Mem(sl);
+		sl = T_Mem(T_Binop(T_plus, sl, T_Const(8)));
 		cur = cur->parent;
 	}
 
@@ -282,7 +286,10 @@ Tr_exp Tr_StringExp(string str) {
 Tr_exp Tr_CallExp(Temp_label label, Tr_expList expList, Tr_level cur, Tr_level dst) {
 	T_exp staticLink = makeStaticLink(cur, dst->parent);
 	T_expList l = makeTExpList(expList);
-	return Tr_Ex(T_Call(T_Name(label), T_ExpList(staticLink, l)));
+	if (staticLink)
+		return Tr_Ex(T_Call(T_Name(label), T_ExpList(staticLink, l)));
+	else
+		return Tr_Ex(T_Call(T_Name(label), l));
 }
 
 Tr_exp Tr_ArithExp(A_oper oper, Tr_exp left, Tr_exp right) {
@@ -312,7 +319,7 @@ Tr_exp Tr_CmpOp(A_oper oper, Tr_exp left, Tr_exp right, int isstr) {
 	if (isstr) 
 		// TO DO: need to determine the function StrCmp
 		stm = T_Cjump(op,
-						F_externalCall("StrCmp", T_ExpList(unEx(left), T_ExpList(unEx(right), NULL))),
+						F_externalCall("stringEqual", T_ExpList(unEx(left), T_ExpList(unEx(right), NULL))),
 							T_Const(1), NULL, NULL);
 
 	else
@@ -324,11 +331,12 @@ Tr_exp Tr_CmpOp(A_oper oper, Tr_exp left, Tr_exp right, int isstr) {
 }
 
 static T_stm makeRecordMove(Temp_temp r, Tr_expList expList, int size, int index) {
+	//printf("fuck%d, %d\n", index, size);
 	if (size == 0)
 		return T_Exp(T_Const(0));
 
 	else if (size == 1)
-		return T_Move(T_Mem(T_Binop(T_plus, T_Temp(r), T_Const(0))), 
+		return T_Move(T_Mem(T_Binop(T_plus, T_Temp(r), T_Const(index * F_wordSize))), 
 										unEx(expList->head));
 	else
 		return T_Seq(T_Move(T_Mem(T_Binop(T_plus, T_Temp(r), T_Const(index * F_wordSize))), 
@@ -338,7 +346,7 @@ static T_stm makeRecordMove(Temp_temp r, Tr_expList expList, int size, int index
 
 Tr_exp Tr_RecordExp(Tr_expList expList, int size) {
 	Temp_temp r = Temp_newtemp();
-	T_exp call = F_externalCall("malloc", T_ExpList(T_Const(size * F_wordSize), NULL));
+	T_exp call = F_externalCall("allocRecord", T_ExpList(T_Const(size * F_wordSize), NULL));
 	T_stm move = makeRecordMove(r, expList, size, 0);
 	return Tr_Ex(T_Eseq(T_Seq(T_Move(T_Temp(r), call),
 												move), T_Temp(r)));
@@ -350,7 +358,7 @@ Tr_exp Tr_AssignExp(Tr_exp l, Tr_exp r) {
 }
 
 Tr_exp Tr_SeqExp(Tr_exp head, Tr_exp tail) {
-	return Tr_Nx(T_Seq(unNx(head), unNx(tail)));
+	return Tr_Ex(T_Eseq(unNx(head), unEx(tail)));
 }
 
 Tr_exp Tr_IfExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
@@ -418,12 +426,19 @@ Tr_exp Tr_BreakExp(Temp_label breakl) {
 	return Tr_Nx(T_Jump(T_Name(breakl), Temp_LabelList(breakl, NULL)));
 }
 
-Tr_exp Tr_LetExp(Tr_exp head, Tr_exp tail) {
-	if (tail == NULL)
-		return Tr_Nx(T_Seq(unNx(head), NULL));
+Tr_exp Tr_LetExp(Tr_expList decl, Tr_exp body) {
+	//printStmList(stdout, T_StmList(unNx(decl->head), NULL));
+	//printf("fuck\n\n");
+	// TO DO: modify
+	Tr_exp exp = body;
+	Tr_exp result;
+	Tr_expList l = decl;
+	for (; l; l = l->tail) 
+		exp = Tr_Ex(T_Eseq(unNx(l->head), unEx(exp)));
 
-	return Tr_Nx(T_Seq(unNx(head), unNx(tail)));
+	return exp;
 }
+
 
 Tr_exp Tr_ArrayExp(Tr_exp size, Tr_exp init) {
 	return Tr_Ex(F_externalCall("initArray", 
@@ -447,6 +462,6 @@ Tr_exp Tr_SubscriptVar(Tr_exp var, Tr_exp index) {
 
 Tr_exp Tr_VarDec(Tr_access acc, Tr_exp init) {
 	/* The definition of var is always in its own level */
-	T_exp dst = F_Exp(acc->access, F_FP());
+	T_exp dst = F_Exp(acc->access, T_Temp(F_FP()));
 	return Tr_Nx(T_Move(dst, unEx(init)));
 }

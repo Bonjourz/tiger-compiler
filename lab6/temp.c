@@ -116,3 +116,92 @@ void Temp_dumpMap(FILE *out, Temp_map m) {
      Temp_dumpMap(out,m->under);
   }
 }
+
+bool same(Temp_tempList a, Temp_tempList b) {
+  assert(duplicate(a) == FALSE); assert(duplicate(b) == FALSE);
+  Temp_tempList al = NULL, bl = NULL;
+  int countb = 0;
+  for (bl = b; bl; bl = bl->tail)
+    countb ++;
+
+  for (al = a; al; al = al->tail) {
+    if(!findTempFromList(al->head, b))
+      return FALSE;
+    countb --;
+    if (countb < 0)
+      return FALSE;
+  }
+  if (al || countb != 0)
+    return FALSE;
+
+  return TRUE;
+}
+
+Temp_tempList unionTempList(Temp_tempList a, Temp_tempList b) {
+  assert(duplicate(a) == FALSE); assert(duplicate(b) == FALSE);
+  Temp_tempList head = NULL, tail = NULL, index = NULL;
+  for (index = a; index; index = index->tail) {
+    if (!head) {
+      head = Temp_TempList(index->head, NULL);
+      tail = head;
+    }
+    else {
+      tail->tail = Temp_TempList(index->head, NULL);
+      tail = tail->tail;
+    }
+  }
+  for (index = b; index; index = index->tail) {
+    if (!findTempFromList(index->head, a)) {
+      if (!head) {
+        head = Temp_TempList(index->head, NULL);
+        tail = head;
+      }
+      else {
+        tail->tail = Temp_TempList(index->head, NULL);
+        tail = tail->tail;
+      }
+    }
+  }
+  assert(duplicate(head) == FALSE);
+  return head;
+}
+
+Temp_tempList sub(Temp_tempList a, Temp_tempList b) {
+  assert(duplicate(a) == FALSE); assert(duplicate(b) == FALSE);
+  Temp_tempList head = NULL, tail = NULL, index = NULL;
+  for (index = a; index; index = index->tail) {
+    if (!findTempFromList(index->head, b)) {
+      if (!head) {
+        head = Temp_TempList(index->head, NULL);
+        tail = head;
+      }
+
+      else {
+        tail->tail = Temp_TempList(index->head, NULL);
+        tail = tail->tail;
+      }
+    }
+  }
+  assert(duplicate(head) == FALSE);
+  return head;
+}
+
+bool findTempFromList(Temp_temp tmp, Temp_tempList tl) {
+  for (; tl; tl = tl->tail) {
+    if (tl->head == tmp)
+      return TRUE;
+  }
+  return FALSE;
+}
+
+bool duplicate(Temp_tempList l) {
+  if (!l || !(l->tail))
+    return FALSE;
+
+  Temp_tempList tl = NULL;
+  for (tl = l; tl; tl = tl->tail) {
+    if (findTempFromList(tl->head, tl->tail))
+      return TRUE;
+  }
+  return FALSE;
+}

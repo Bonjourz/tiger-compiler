@@ -11,6 +11,8 @@ typedef struct G_node_ *G_node;    /* The "node" type */
 typedef struct G_nodeList_ *G_nodeList;
 struct G_nodeList_ { G_node head; G_nodeList tail;};
 
+int G_key(G_node n);
+
 /* Make a new graph */
 G_graph G_Graph(void); 
 /* Make a new node in graph "g", with associated "info" */
@@ -65,5 +67,9 @@ void G_enter(G_table t, G_node node, void *value);
 
 /* Tell what "node" maps to in table "t" */
 void *G_look(G_table t, G_node node);
+
+G_nodeList G_nodesLast(G_graph g);
+
+G_nodeList G_subNodeFromList(G_node n, G_nodeList l);
 
 #endif
