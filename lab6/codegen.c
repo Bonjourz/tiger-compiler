@@ -392,6 +392,16 @@ static void munchStm(T_stm s) {
 				return;
 			}
 
+			else if (s->u.MOVE.dst->kind == T_MEM) {
+				// move (mem(e1), e2)	// bug fix
+				Temp_temp src = munchExp(s->u.MOVE.src);
+				Temp_temp dst = munchExp(s->u.MOVE.dst->u.MEM);
+				char* out1 = (char *)checked_malloc(STRLEN);
+				sprintf(out1, "movl `s0, (`s1)");
+				emit(AS_Oper(out1, NULL, L(src, L(dst, NULL)), NULL));
+				return;
+			}
+
 			else if (s->u.MOVE.src->kind == T_BINOP &&
 				s->u.MOVE.src->u.BINOP.op == T_plus &&
 				s->u.MOVE.src->u.BINOP.left->kind == T_TEMP &&
