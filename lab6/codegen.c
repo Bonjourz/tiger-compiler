@@ -496,15 +496,18 @@ static void munchStm(T_stm s) {
 				s->u.MOVE.src->kind == T_BINOP &&
 				s->u.MOVE.src->u.BINOP.left->kind == T_TEMP &&
 				s->u.MOVE.src->u.BINOP.left->u.TEMP == s->u.MOVE.dst->u.TEMP &&
-				s->u.MOVE.src->u.BINOP.right->kind == T_CONST) {
+				s->u.MOVE.src->u.BINOP.right->kind == T_CONST &&
+				(s->u.MOVE.src->u.BINOP.op == T_plus || s->u.MOVE.src->u.BINOP.op == T_minus)) {
 				/* for loop
-				**  move(temp a,binop(+, temp a, const 1))
+				**  move(temp a,binop(+/-, temp a, const 1))
 				*/
 				int i = s->u.MOVE.src->u.BINOP.right->u.CONST;
+				if (s->u.MOVE.src->u.BINOP.op == T_minus)
+					i = -i;
 				Temp_temp r =  s->u.MOVE.dst->u.TEMP;
 				char* out = (char *)checked_malloc(STRLEN);
 				sprintf(out, "addl $%d, `d0", i);
-				emit(AS_Oper(out, L(r, NULL), NULL, NULL));
+				emit(AS_Oper(out, L(r, NULL), L(r, NULL), NULL));
 				return; 
 			}
 

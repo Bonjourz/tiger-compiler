@@ -96,8 +96,9 @@ static Temp_tempList calIn(G_node n, Temp_tempList out) {
 	Temp_tempList def = FG_def(n);
 	Temp_tempList tmp = sub(out, def);
 	Temp_tempList r = unionTempList(use, tmp);/*
-	if (G_key(n) == 10) {
-		tmp = sub1(out, def);
+	if (G_key(n) == 15) {
+		Temp_tempList l;
+		tmp = sub(out, def);
 		r = unionTempList(use, tmp);
 		printf("\nuse: ");
 		for(; use; use = use->tail)
@@ -109,11 +110,11 @@ static Temp_tempList calIn(G_node n, Temp_tempList out) {
 		for(; out; out = out->tail)
 			printf(" %d", Temp_int(out->head));
 		printf("\ntmp: ");
-		for(; tmp; tmp = tmp->tail)
-			printf(" %d", Temp_int(tmp->head));
+		for(l = tmp; l; l = l->tail)
+			printf(" %d", Temp_int(l->head));
 		printf("\nresult: ");
-		for(; r; r = r->tail)
-			printf(" %d", Temp_int(r->head));
+		for(l = r; l; l = l->tail)
+			printf(" %d", Temp_int(l->head));
 		printf("\n===============\n");
 	}
 	else {
@@ -127,7 +128,7 @@ static Temp_tempList calOut(G_nodeList succ, G_table in_table) {
 	Temp_tempList tl = NULL;
 	G_nodeList l = NULL;
 	for (l = succ; l; l = l->tail) {
-		Temp_tempList outl = (Temp_tempList)G_look(in_table, l->head);
+		Temp_tempList outl = (Temp_tempList)lookupLiveMap(in_table, l->head);
 		tl = unionTempList(tl, outl);
 	}
 
@@ -273,6 +274,13 @@ struct Live_graph Live_liveness(G_graph flow) {
 				finish = FALSE;
 			}
 			if (!same(out, out_n)) {
+				/*
+				if (G_key(l->head) == 16) {
+					Temp_tempList tmp = out_n;
+					for (; tmp; tmp = tmp->tail)
+						printf(" %d ", Temp_int(tmp->head));
+					printf("\n");
+				}*/
 				enterLiveMap(out_table, l->head, out_n);
 				finish = FALSE;
 			}
