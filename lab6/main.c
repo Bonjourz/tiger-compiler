@@ -3,6 +3,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "util.h"
 #include "symbol.h"
 #include "types.h"
@@ -21,6 +22,7 @@
 #include "escape.h" 
 #include "parse.h"
 #include "codegen.h"
+#include "graph.h"
 #include "regalloc.h"
 
 extern bool anyErrors;
@@ -42,11 +44,15 @@ static void doProc(FILE *out, F_frame frame, T_stm body)
  AS_instrList iList;
  struct C_block blo;
 
- F_tempMap = Temp_empty();
-
+ Temp_map F_tempMap = Temp_empty();
+ initTempMap(F_tempMap);
+ /*
+ printf("machin reg: eax:%d, ebx:%d, ecx%d, edx:%d, edi:%d, esi:%d, esp:%d, ebp:%d\n",
+  Temp_int(F_EAX()), Temp_int(F_EBX()), Temp_int(F_ECX()), Temp_int(F_EDX()), 
+  Temp_int(F_EDI()), Temp_int(F_ESI()),Temp_int(F_ESP()), Temp_int(F_EBP()));*/
  //printf("doProc for function %s:\n", S_name(F_name(frame)));
- /*printStmList(stdout, T_StmList(body, NULL));
- printf("-------====IR tree=====-----\n");*/
+  //printStmList(stdout, T_StmList(body, NULL));
+ //printf("-------====IR tree=====-----\n");
 
  stmList = C_linearize(body);
  /*printStmList(stdout, stmList);
@@ -60,58 +66,46 @@ static void doProc(FILE *out, F_frame frame, T_stm body)
  }*/
 
  stmList = C_traceSchedule(blo);
- /*printStmList(stdout, stmList);
- printf("-------====trace=====-----\n");*/
+ //if (!strncmp(S_name(F_name(frame)), "quicksort", 5)) {
+ //printStmList(stdout, stmList);
+ //printf("-------====trace=====-----\n");}
  iList  = F_codegen(frame, stmList); /* 9 */
+  //printf("fuckframe: %s\n", S_name(F_name(frame)));
+ //printf("divide===============\n");
+ //if (!strncmp(S_name(F_name(frame)), "quicksort", 5)) {
+ //AS_printInstrList(stdout, iList, Temp_layerMap(F_tempMap, Temp_name()));
+ //printf("\n\n----======before RA=======-----\n\n");}
 
- AS_printInstrList(stdout, iList, Temp_layerMap(F_tempMap, Temp_name()));
- printf("----======before RA=======-----\n");
-
- //G_graph fg = FG_AssemFlowGraph(iList);  /* 10.1 */
- struct RA_result ra = RA_regAlloc(frame, iList);  /* 11 */
-
- fprintf(out, "BEGIN function\n");
- AS_printInstrList (out, proc->body,
-                       Temp_layerMap(F_tempMap, ra.coloring));
- fprintf(out, "END function\n");
-
- //Part of TA's implementation. Just for reference.
- /*
- AS_rewrite(ra.il, Temp_layerMap(F_tempMap, ra.coloring));
+ struct RA_result ra = RA_regAlloc(frame, iList); 
+ 
  proc =	F_procEntryExit3(frame, ra.il);
-
+ //if (!strncmp(S_name(F_name(frame)), "quicksort", 5)) {
  string procName = S_name(F_name(frame));
- fprintf(out, ".text\n");
+ fprintf(out, "\n.text\n");
  fprintf(out, ".globl %s\n", procName);
  fprintf(out, ".type %s, @function\n", procName);
  fprintf(out, "%s:\n", procName);
-
- 
- //fprintf(stdout, "%s:\n", Temp_labelstring(F_name(frame)));
- //prologue
- fprintf(out, "%s", proc->prolog);
+ fprintf(out, "%s\n", proc->prolog);
  AS_printInstrList (out, proc->body,
                        Temp_layerMap(F_tempMap, ra.coloring));
- fprintf(out, "%s", proc->epilog);
- //fprintf(out, "END %s\n\n", Temp_labelstring(F_name(frame)));
- */
+ fprintf(out, "\n%s", proc->epilog);//}
 }
 
 void doStr(FILE *out, Temp_label label, string str) {
-	fprintf(out, ".section .rodata\n");
+	fprintf(out, "\n.section .rodata\n");
 	fprintf(out, ".%s:\n", S_name(label));
-
-	int length = *(int *)str;
-	length = length + 4;
 	//it may contains zeros in the middle of string. To keep this work, we need to print all the charactors instead of using fprintf(str)
-	fprintf(out, ".string \"");
-	int i = 0;
-	for (; i < length; i++) {
-		fprintf(out, "%c", str[i]);
-	}
-	fprintf(out, "\"\n");
-
-	//fprintf(out, ".string \"%s\"\n", str);
+	fprintf(out, ".int %d\n", (int)strlen(str));
+  fprintf(out, ".string \"");
+  for (; *str != '\0'; str++) {
+    if (*str == '\n')
+      fprintf(out, "\\n");
+    else if (*str == '\t')
+      fprintf(out, "\\t");
+    else
+      fprintf(out, "%c", *str);
+  }
+  fprintf(out, "\"\n");
 }
 
 int main(int argc, string *argv)
@@ -120,7 +114,7 @@ int main(int argc, string *argv)
  S_table base_env, base_tenv;
  F_fragList frags;
  char outfile[100];
- FILE *out = stdout;
+ FILE *out;
 
  if (argc==2) {
    absyn_root = parse(argv[1]);
@@ -132,16 +126,14 @@ int main(int argc, string *argv)
    fprintf(out, "\n");
 #endif
 
-   //Lab 6: escape analysis
-   //If you have implemented escape analysis, uncomment this
-   //Esc_findEscape(absyn_root); /* set varDec's escape field */
-
+   Esc_findEscape(absyn_root);
    frags = SEM_transProg(absyn_root);
    if (anyErrors) return 1; /* don't continue */
 
    /* convert the filename */
    sprintf(outfile, "%s.s", argv[1]);
    out = fopen(outfile, "w");
+   out = NULL;
    /* Chapter 8, 9, 10, 11 & 12 */
    for (;frags;frags=frags->tail)
      if (frags->head->kind == F_procFrag) {
