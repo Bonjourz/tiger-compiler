@@ -76,7 +76,7 @@ static void doProc(FILE *out, F_frame frame, T_stm body)
  //if (!strncmp(S_name(F_name(frame)), "quicksort", 5)) {
  //AS_printInstrList(stdout, iList, Temp_layerMap(F_tempMap, Temp_name()));
  //printf("\n\n----======before RA=======-----\n\n");//}
-
+ iList = F_procEntryExit2(iList);
  struct RA_result ra = RA_regAlloc(frame, iList); 
  
  proc =	F_procEntryExit3(frame, ra.il);

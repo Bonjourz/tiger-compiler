@@ -288,21 +288,49 @@ int F_paraNum(F_frame f) {
 	return f->argSize;
 }
 
+static Temp_tempList L(Temp_temp h, Temp_tempList t) {
+	return Temp_TempList(h, t);
+}
+
+AS_instrList F_procEntryExit2(AS_instrList body) {
+	Temp_temp tmp1 = Temp_newtemp();
+	Temp_temp tmp2 = Temp_newtemp();
+	Temp_temp tmp3 = Temp_newtemp();
+	char *out = (char *)checked_malloc(30);
+	sprintf(out, "movl `s0, `d0");
+	AS_instrList result = NULL, il = NULL;
+	result = il = AS_InstrList(AS_Move(out, L(tmp1, NULL), L(F_EBX(), NULL)), NULL);
+	il->tail = AS_InstrList(AS_Move(out, L(tmp2, NULL), L(F_EDI(), NULL)), NULL);
+	il = il->tail;
+	il->tail = AS_InstrList(AS_Move(out, L(tmp3, NULL), L(F_ESI(), NULL)), NULL);
+	il = il->tail;
+	il->tail = body;
+	while(il->tail)
+		il = il->tail;
+	il->tail = AS_InstrList(AS_Move(out, L(F_ESI(), NULL), L(tmp3, NULL)), NULL);
+	il = il->tail;
+	il->tail = AS_InstrList(AS_Move(out, L(F_EDI(), NULL), L(tmp2, NULL)), NULL);
+	il = il->tail;
+	il->tail = AS_InstrList(AS_Move(out, L(F_EBX(), NULL), L(tmp1, NULL)), NULL);
+	return result;
+}
 
 AS_proc F_procEntryExit3(F_frame f, AS_instrList body) {
 	char *prologue = (char *)checked_malloc(100);
 	char *epilogue = (char *)checked_malloc(100);
 	sprintf(prologue, "push %%ebp\n");
 	sprintf(prologue, "%smovl %%esp, %%ebp\n", prologue);
-	sprintf(prologue, "%ssubl $%d, %%esp\n", prologue, f->f_cnt * F_wordSize);
-	sprintf(prologue, "%spushl %%ebx\n", prologue);
-	sprintf(prologue, "%spushl %%edi\n", prologue);
-	sprintf(prologue, "%spushl %%esi\n", prologue);
+	if (f->f_cnt != 0) {
+		sprintf(prologue, "%ssubl $%d, %%esp\n", prologue, f->f_cnt * F_wordSize);
+	//sprintf(prologue, "%spushl %%ebx\n", prologue);
+	//sprintf(prologue, "%spushl %%edi\n", prologue);
+	//sprintf(prologue, "%spushl %%esi\n", prologue);
 
-	sprintf(epilogue, "popl %%esi\n");
-	sprintf(epilogue, "%spopl %%edi\n", epilogue);
-	sprintf(epilogue, "%spopl %%ebx\n", epilogue);
-	sprintf(epilogue, "%saddl $%d, %%esp\n", epilogue, f->f_cnt * F_wordSize);
+	//sprintf(epilogue, "popl %%esi\n");
+	//sprintf(epilogue, "%spopl %%edi\n", epilogue);
+	//sprintf(epilogue, "%spopl %%ebx\n", epilogue);
+		sprintf(epilogue, "%saddl $%d, %%esp\n", epilogue, f->f_cnt * F_wordSize);
+	}
 	sprintf(epilogue, "%spopl %%ebp\n", epilogue);
 	sprintf(epilogue, "%sret\n", epilogue);
 
