@@ -21,6 +21,7 @@ static AS_instrList iList = NULL, last = NULL;
 static void emit(AS_instr inst) {
 	if (inst->kind == I_MOVE && inst->u.MOVE.src->head == inst->u.MOVE.dst->head)
 		return;
+	
 	if (last != NULL) 
     	last = last->tail = AS_InstrList(inst, NULL);
   	else 
@@ -35,7 +36,7 @@ static Temp_tempList L(Temp_temp h, Temp_tempList t) {
 AS_instrList F_codegen(F_frame f, T_stmList stmList) {
 	AS_instrList list;
 	T_stmList sl;
-	// TO DO: caller save and callee save
+
 	for (sl = stmList; sl; sl = sl->tail)
 		munchStm(sl->head);
 	list = iList;
@@ -85,7 +86,6 @@ static int munchArgs(T_expList args) {
 static Temp_temp munchExp(T_exp e) {
 	switch(e->kind) {
 		case T_BINOP: {
-			//printf("binop\n");
 			T_binOp op = e->u.BINOP.op;
 			switch(op) {
 				case T_plus: {
@@ -246,8 +246,7 @@ static Temp_temp munchExp(T_exp e) {
 					assert(0);
 			}
 		}
-		case T_MEM: {
-			//printf("mem\n");
+		case T_MEM: {;
 			if (e->u.MEM->kind == T_BINOP) {
 				T_exp binexp = e->u.MEM;
 				if (binexp->u.BINOP.right->kind == T_CONST && 
@@ -292,29 +291,24 @@ static Temp_temp munchExp(T_exp e) {
 		}
 
 		case T_TEMP: {
-			//printf("temp\n");
 			return e->u.TEMP;
 		}
 
 		case T_ESEQ: {
-			//printf("eseq\n");
 			if (e->u.ESEQ.stm)
 				munchStm(e->u.ESEQ.stm);
 			return munchExp(e->u.ESEQ.exp);
 		}
 
 		case T_NAME: {
-			//printf("name\n");
 			Temp_temp tmp = Temp_newtemp();
 			char* out = (char*)checked_malloc(STRLEN);
 			sprintf(out, "movl $.%s, `d0", Temp_labelstring(e->u.NAME));
-			// TO DO: src ??
 			emit(AS_Oper(out, L(tmp, NULL), NULL, NULL));
 			return tmp;
 		}
 
 		case T_CONST: {
-			//printf("const\n");
 			Temp_temp tmp = Temp_newtemp();
 			char* out = (char*)checked_malloc(STRLEN);
 			sprintf(out, "movl $%d, `d0", e->u.CONST);
@@ -323,21 +317,13 @@ static Temp_temp munchExp(T_exp e) {
 		}
 
 		case T_CALL: {
-			//printf("call\n");
-			// TO DO: src and dst
-			//emit(AS_Oper("pushl %ebx", NULL, NULL, NULL));
-			//emit(AS_Oper("pushl %ecx", NULL, NULL, NULL));
 			int argNum = munchArgs(e->u.CALL.args);
 			char* out1 = (char*)checked_malloc(STRLEN);
 			sprintf(out1, "call %s", Temp_labelstring(e->u.CALL.fun->u.NAME));
-			// TO DO
 			emit(AS_Oper(out1, L(F_ECX(), L(F_EDX(), L(F_EAX(), NULL))), NULL, NULL));
-			//emit(AS_Oper(out1, L(F_EAX(), NULL), NULL, NULL));
 			char* out2 = (char *)checked_malloc(STRLEN);
 			sprintf(out2, "addl $%d, `s0", argNum * 4);
 			emit(AS_Oper(out2, NULL, L(F_ESP(), NULL), NULL));
-			//emit(AS_Oper("popl %ecx", NULL, NULL, NULL));
-			//emit(AS_Oper("popl %ebx", NULL, NULL, NULL));
 			Temp_temp tmp = Temp_newtemp();
 			return F_EAX();
 		}
@@ -347,7 +333,6 @@ static Temp_temp munchExp(T_exp e) {
 static void munchStm(T_stm s) {
 	switch(s->kind) {
 		case T_MOVE: {
-			//printf("move\n");
 			if (s->u.MOVE.dst->kind == T_MEM &&
 				s->u.MOVE.dst->u.MEM->kind == T_BINOP &&
 				s->u.MOVE.dst->u.MEM->u.BINOP.op == T_plus &&
@@ -546,7 +531,6 @@ static void munchStm(T_stm s) {
 		}
 
 		case T_CJUMP: {
-			//printf("cjump\n");
 			//struct {T_relOp op; T_exp left, right; Temp_label true, false;} CJUMP;
 			char *str = NULL;
 			switch (s->u.CJUMP.op) {

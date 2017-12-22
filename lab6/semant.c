@@ -257,8 +257,6 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level cur_l, Temp_
 		}
 
 		case A_seqExp: {
-			// TO DO : the result of transexp
-			/* Must consider if there is no sequence of expression */
 			Tr_exp exp = Tr_NullExp();
 			struct expty r = expTy(exp, Ty_Void());
 			A_expList seq = a->u.seq;
@@ -267,8 +265,6 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level cur_l, Temp_
 				struct expty tmp = transExp(venv, tenv, seq->head, cur_l, breakl);
 				r.exp = Tr_SeqExp(r.exp, tmp.exp);
 				r.ty = tmp.ty;
-				//printf("seq exp %d\n", count++);
-				//transExp(venv, tenv, seq->head, cur_l, breakl);
 			}
 
 			return r;
@@ -402,7 +398,6 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level cur_l, Temp_
 			if (!arr_ty)
 				EM_error(a->pos, "Undefied variable");
 
-			/* TO DO: To much arr_ty */
 			if (!match(actual_ty(actual_ty(arr_ty)->u.array), init.ty)) {
 				EM_error(a->pos, "type mismatch");
 				return expTy(NULL, Ty_Void());

@@ -20,20 +20,9 @@ struct F_frame_{
 	Temp_label name;
 	F_accessList formals;
 	F_accessList locals;
-
-	//the number of arguments
-	int argSize;
-
-	//the number of local variables
-	int length;
 	
 	//num of local var in the frame	
 	int f_cnt;		
-
-	//register lists for the frame
-	Temp_tempList calleesaves;
-	Temp_tempList callersaves;
-	Temp_tempList specialregs;
 
 	Temp_map F_tempMap;
 };
@@ -42,19 +31,13 @@ F_frame F_newFrame(Temp_label l, U_boolList formals) {
 	F_frame f = (F_frame)checked_malloc(sizeof(*f));
 	f->name = l;
 	f->locals = NULL;
-	f->argSize = 0;
-	f->length = 0;
 	f->f_cnt = 0;
-	f->callersaves = NULL;
-	f->calleesaves = NULL;
-	f->specialregs = NULL;
 	f->F_tempMap = Temp_name();
 
 	F_accessList aHead = NULL, aTail = NULL;
 	F_access a = NULL;
 	int offset = 3;
 	for (; formals; formals = formals->tail) {
-		f->argSize++;
 		/* escape */
 		if (!formals->head)
 			a = InReg(Temp_newtemp());
@@ -98,7 +81,6 @@ F_access F_allocLocal(F_frame f, bool escape) {
 		a = InFrame(-(f->f_cnt) * F_wordSize);
 	}
 	f->locals = F_AccessList(a, f->locals);
-	f->length++;
 	return a;
 }
 
@@ -284,10 +266,6 @@ void initTempMap(Temp_map temMap) {
 	Temp_enter(temMap, F_ESP(), "%esp");
 }
 
-int F_paraNum(F_frame f) {
-	return f->argSize;
-}
-
 static Temp_tempList L(Temp_temp h, Temp_tempList t) {
 	return Temp_TempList(h, t);
 }
@@ -322,13 +300,6 @@ AS_proc F_procEntryExit3(F_frame f, AS_instrList body) {
 	sprintf(prologue, "%smovl %%esp, %%ebp\n", prologue);
 	if (f->f_cnt != 0) {
 		sprintf(prologue, "%ssubl $%d, %%esp\n", prologue, f->f_cnt * F_wordSize);
-	//sprintf(prologue, "%spushl %%ebx\n", prologue);
-	//sprintf(prologue, "%spushl %%edi\n", prologue);
-	//sprintf(prologue, "%spushl %%esi\n", prologue);
-
-	//sprintf(epilogue, "popl %%esi\n");
-	//sprintf(epilogue, "%spopl %%edi\n", epilogue);
-	//sprintf(epilogue, "%spopl %%ebx\n", epilogue);
 		sprintf(epilogue, "%saddl $%d, %%esp\n", epilogue, f->f_cnt * F_wordSize);
 	}
 	sprintf(epilogue, "%spopl %%ebp\n", epilogue);

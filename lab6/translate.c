@@ -186,7 +186,6 @@ static T_exp unEx(Tr_exp e) {
 }
 
 static T_stm unNx(Tr_exp e) {
-	//printf("unnx\n");
 	switch(e->kind) {
 		case Tr_ex:
 			return T_Exp(e->u.ex);
@@ -199,7 +198,6 @@ static T_stm unNx(Tr_exp e) {
 			Temp_label t = Temp_newlabel(), f = Temp_newlabel();
 			doPatch(e->u.cx.trues, t);
 			doPatch(e->u.cx.falses, f);
-			/* To Do:(maybe) */
 			return T_Seq(T_Move(T_Temp(r), T_Const(1)),
 							T_Seq(e->u.cx.stm,
 								T_Seq(T_Label(f),
@@ -215,7 +213,6 @@ static struct Cx unCx(Tr_exp e) {
 		case Tr_ex: {
 			Temp_label t = Temp_newlabel(), f = Temp_newlabel();
 			struct Cx cx;
-			/* To Do */
 			cx.stm = T_Cjump(T_ne, e->u.ex, T_Const(0), NULL, NULL);
 			cx.trues = PatchList(&(cx.stm->u.CJUMP.true), NULL);
 			cx.falses = PatchList(&(cx.stm->u.CJUMP.false), NULL);
@@ -233,12 +230,8 @@ static struct Cx unCx(Tr_exp e) {
 }
 
 void Tr_procEntryExit(Tr_level level, Tr_exp body, Tr_accessList formals) {
-	//T_stm stm = T_Exp(unEx(body));
-	//printStmList(stdout, T_StmList(stm, NULL));
-	//printf("fuck\n");
 	T_stm stm = T_Move(T_Temp(F_RV()), unEx(body));
 	F_frag f = F_ProcFrag(stm, level->frame);
-	//printf("exit2\n");
 	frag_list = F_FragList(f, frag_list);
 }
 
@@ -247,7 +240,6 @@ static T_exp makeStaticLink(Tr_level cur, Tr_level dst) {
 		return NULL;
 
 	T_exp sl = T_Temp(F_FP());
-	// TO DO: if cur == NULL ??
 	while (cur && cur != dst) {
 		sl = T_Mem(T_Binop(T_plus, sl, T_Const(8)));
 		cur = cur->parent;
@@ -330,7 +322,6 @@ Tr_exp Tr_CmpOp(A_oper oper, Tr_exp left, Tr_exp right, int isstr) {
 }
 
 static T_stm makeRecordMove(Temp_temp r, Tr_expList expList, int size, int index) {
-	//printf("fuck%d, %d\n", index, size);
 	if (size == 0)
 		return T_Exp(T_Const(0));
 
@@ -363,7 +354,6 @@ Tr_exp Tr_SeqExp(Tr_exp head, Tr_exp tail) {
 Tr_exp Tr_IfExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
 	Temp_label t = Temp_newlabel(), f = Temp_newlabel(), done = Temp_newlabel();
 	if (elsee == NULL) {
-		//printf("ifelse\n");
 		Temp_temp r = Temp_newtemp();
 		struct Cx cx = unCx(test);
 		doPatch(cx.trues, t);
@@ -386,7 +376,7 @@ Tr_exp Tr_IfExp(Tr_exp test, Tr_exp then, Tr_exp elsee) {
 													T_Seq(T_Label(f),
 														T_Seq(unNx(elsee), T_Label(done))))))));
 		}
-		// TO Do:need to add
+
 		return Tr_Ex(T_Eseq(T_Seq(cx.stm,
 													T_Seq(T_Label(t), 
 														T_Seq(T_Move(T_Temp(r), unEx(then)),
@@ -426,11 +416,7 @@ Tr_exp Tr_BreakExp(Temp_label breakl) {
 }
 
 Tr_exp Tr_LetExp(Tr_expList decl, Tr_exp body) {
-	//printStmList(stdout, T_StmList(unNx(decl->head), NULL));
-	//printf("fuck\n\n");
-	// TO DO: modify
 	Tr_exp exp = body;
-	Tr_exp result;
 	Tr_expList l = decl;
 	for (; l; l = l->tail) 
 		exp = Tr_Ex(T_Eseq(unNx(l->head), unEx(exp)));

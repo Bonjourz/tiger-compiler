@@ -46,41 +46,23 @@ static void doProc(FILE *out, F_frame frame, T_stm body)
 
  Temp_map F_tempMap = Temp_empty();
  initTempMap(F_tempMap);
- /*
- printf("==========frame: %s==========\n", S_name(F_name(frame)));
- printf("machine reg: eax:%d, ebx:%d, ecx%d, edx:%d, edi:%d, esi:%d, esp:%d, ebp:%d\n",
-  Temp_int(F_EAX()), Temp_int(F_EBX()), Temp_int(F_ECX()), Temp_int(F_EDX()), 
-  Temp_int(F_EDI()), Temp_int(F_ESI()),Temp_int(F_ESP()), Temp_int(F_EBP()));*/
- //printf("doProc for function %s:\n", S_name(F_name(frame)));
-  //printStmList(stdout, T_StmList(body, NULL));
- //printf("-------====IR tree=====-----\n");
 
  stmList = C_linearize(body);
- /*printStmList(stdout, stmList);
- printf("-------====Linearlized=====-----\n");*/
 
  blo = C_basicBlocks(stmList);
+
  C_stmListList stmLists = blo.stmLists;
- /*for (; stmLists; stmLists = stmLists->tail) {
- 	printStmList(stdout, stmLists->head);
-	printf("------====Basic block=====-------\n");
- }*/
 
  stmList = C_traceSchedule(blo);
- //if (!strncmp(S_name(F_name(frame)), "quicksort", 5)) {
- //printStmList(stdout, stmList);
- //printf("-------====trace=====-----\n");}
- iList  = F_codegen(frame, stmList); /* 9 */
-  //printf("fuckframe: %s\n", S_name(F_name(frame)));
- //printf("divide===============\n");
- //if (!strncmp(S_name(F_name(frame)), "quicksort", 5)) {
- //AS_printInstrList(stdout, iList, Temp_layerMap(F_tempMap, Temp_name()));
- //printf("\n\n----======before RA=======-----\n\n");//}
+
+ iList  = F_codegen(frame, stmList);
+
  iList = F_procEntryExit2(iList);
+
  struct RA_result ra = RA_regAlloc(frame, iList); 
  
  proc =	F_procEntryExit3(frame, ra.il);
- //if (!strncmp(S_name(F_name(frame)), "quicksort", 5)) {
+
  string procName = S_name(F_name(frame));
  fprintf(out, "\n.text\n");
  fprintf(out, ".globl %s\n", procName);
@@ -89,13 +71,12 @@ static void doProc(FILE *out, F_frame frame, T_stm body)
  fprintf(out, "%s\n", proc->prolog);
  AS_printInstrList (out, proc->body,
                        Temp_layerMap(F_tempMap, ra.coloring));
- fprintf(out, "\n%s", proc->epilog);//}
+ fprintf(out, "\n%s", proc->epilog);
 }
 
 void doStr(FILE *out, Temp_label label, string str) {
 	fprintf(out, "\n.section .rodata\n");
 	fprintf(out, ".%s:\n", S_name(label));
-	//it may contains zeros in the middle of string. To keep this work, we need to print all the charactors instead of using fprintf(str)
 	fprintf(out, ".int %d\n", (int)strlen(str));
   fprintf(out, ".string \"");
   for (; *str != '\0'; str++) {

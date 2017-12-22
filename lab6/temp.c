@@ -118,7 +118,7 @@ void Temp_dumpMap(FILE *out, Temp_map m) {
 }
 
 bool same(Temp_tempList a, Temp_tempList b) {
-  assert(duplicate(a) == FALSE); assert(duplicate(b) == FALSE);
+  //assert(duplicate(a) == FALSE); assert(duplicate(b) == FALSE);
   Temp_tempList al = NULL, bl = NULL;
   int countb = 0;
   for (bl = b; bl; bl = bl->tail)
@@ -138,7 +138,7 @@ bool same(Temp_tempList a, Temp_tempList b) {
 }
 
 Temp_tempList unionTempList(Temp_tempList a, Temp_tempList b) {
-  assert(duplicate(a) == FALSE); assert(duplicate(b) == FALSE);
+  //assert(duplicate(a) == FALSE); assert(duplicate(b) == FALSE);
   Temp_tempList head = NULL, tail = NULL, index = NULL;
   for (index = a; index; index = index->tail) {
     if (!head) {
@@ -162,12 +162,12 @@ Temp_tempList unionTempList(Temp_tempList a, Temp_tempList b) {
       }
     }
   }
-  assert(duplicate(head) == FALSE);
+  //assert(duplicate(head) == FALSE);
   return head;
 }
 
 Temp_tempList sub(Temp_tempList a, Temp_tempList b) {
-  assert(duplicate(a) == FALSE); assert(duplicate(b) == FALSE);
+  //assert(duplicate(a) == FALSE); assert(duplicate(b) == FALSE);
   Temp_tempList head = NULL, tail = NULL, index = NULL;
   for (index = a; index; index = index->tail) {
     if (!findTempFromList(index->head, b)) {
@@ -182,7 +182,7 @@ Temp_tempList sub(Temp_tempList a, Temp_tempList b) {
       }
     }
   }
-  assert(duplicate(head) == FALSE);
+  //assert(duplicate(head) == FALSE);
   return head;
 }
 

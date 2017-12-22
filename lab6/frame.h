@@ -61,10 +61,8 @@ bool isMachineReg(Temp_temp temp);
 void initTempMap(Temp_map temMap);
 
 int F_makeSpill(F_frame f);
-int F_paraNum(F_frame f);
 
 AS_instrList F_procEntryExit2(AS_instrList body);
-
 AS_proc F_procEntryExit3(F_frame f, AS_instrList body);
 
 #endif

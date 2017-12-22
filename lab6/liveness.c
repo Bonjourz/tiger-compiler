@@ -15,27 +15,6 @@ static Live_moveList workListMoves = NULL;
 static TAB_table moveList = NULL;
 static TAB_table usesDefs = NULL;
 static TAB_table tempToNode = NULL;
-
-
-void showOutTable(G_graph flow, TAB_table out) {
-	Temp_map map = Temp_empty();
-	initTempMap(map);
-	printf("showouttablebegin================\n");
-	G_nodeList l = G_nodes(flow);
-	for (; l; l = l->tail) {
-		Temp_tempList tl = G_look(out, l->head);
-		AS_instr i = (AS_instr)G_nodeInfo(l->head);
-		AS_printInstrList(stdout, AS_InstrList(i, NULL), Temp_layerMap(map, Temp_name()));
-		for(; tl; tl = tl->tail)
-			printf(" %d", Temp_int(tl->head));
-
-		printf("\n");
-	}
-	printf("showouttableend================\n");
-}
-
-
-
 static Temp_tempList allTemp = NULL;
 
 Live_moveList Live_MoveList(Live_move head, Live_moveList tail) {
@@ -151,38 +130,11 @@ static G_nodeList reverseNode(G_nodeList l) {
 	return r;
 }
 
-/* Whether 'tmp' in 'l' or not */
-
 static Temp_tempList calIn(G_node n, Temp_tempList out) {
 	Temp_tempList use = FG_use(n);
 	Temp_tempList def = FG_def(n);
 	Temp_tempList tmp = sub(out, def);
-	Temp_tempList r = unionTempList(use, tmp);/*
-	if (G_key(n) == 15) {
-		Temp_tempList l;
-		tmp = sub(out, def);
-		r = unionTempList(use, tmp);
-		printf("\nuse: ");
-		for(; use; use = use->tail)
-			printf(" %d", Temp_int(use->head));
-		printf("\ndef: ");
-		for(; def; def = def->tail)
-			printf(" %d", Temp_int(def->head));
-		printf("\nout: ");
-		for(; out; out = out->tail)
-			printf(" %d", Temp_int(out->head));
-		printf("\ntmp: ");
-		for(l = tmp; l; l = l->tail)
-			printf(" %d", Temp_int(l->head));
-		printf("\nresult: ");
-		for(l = r; l; l = l->tail)
-			printf(" %d", Temp_int(l->head));
-		printf("\n===============\n");
-	}
-	else {
-		tmp = sub(out, def);
-		r = unionTempList(use, tmp);
-	}*/
+	Temp_tempList r = unionTempList(use, tmp);
 	return r;
 }
 
@@ -316,19 +268,14 @@ static G_graph makeInterferenceGraph(G_graph flow, G_table out_table) {
 			}
 		}
 	}
-	// TO DO: Add coalesce function
+
 	return interferenceGraph;
 }
 
-struct Live_graph Live_liveness(G_graph flow) {
-	workListMoves = NULL;
-	moveList = TAB_empty();
-	usesDefs = TAB_empty();
-	tempToNode = TAB_empty();
-
+G_table constructOutTable(G_graph flow) {
 	G_table in_table = G_empty();
 	G_table out_table = G_empty();
-	G_nodeList nodes = G_nodes(flow);
+	G_nodeList nodes = reverseNode(G_nodes(flow));
 	G_nodeList l = NULL;
 	for (l = nodes; l; l = l->tail) {
 		enterLiveMap(in_table, l->head, NULL);
@@ -348,22 +295,22 @@ struct Live_graph Live_liveness(G_graph flow) {
 				finish = FALSE;
 			}
 			if (!same(out, out_n)) {
-				/*
-				if (G_key(l->head) == 16) {
-					Temp_tempList tmp = out_n;
-					for (; tmp; tmp = tmp->tail)
-						printf(" %d ", Temp_int(tmp->head));
-					printf("\n");
-				}*/
 				enterLiveMap(out_table, l->head, out_n);
 				finish = FALSE;
 			}
 		}
 	}
+	return out_table;
+}
 
-	//TAB_dump(TAB_table t, void (*show)(void *key, void *value))
-	//showOutTable(flow, out_table);
+struct Live_graph Live_liveness(G_graph flow) {
+	workListMoves = NULL;
+	moveList = TAB_empty();
+	usesDefs = TAB_empty();
+	tempToNode = TAB_empty();
+	allTemp = NULL;
 
+	G_table out_table = constructOutTable(flow);
 	G_graph interferenceGraph = makeInterferenceGraph(flow, out_table);
 	struct Live_graph lg;
 	lg.graph = interferenceGraph;

@@ -202,8 +202,10 @@ bool G_duplicate(G_nodeList nl) {
   return FALSE;
 }
 
+
 G_nodeList G_union(G_nodeList a, G_nodeList b) {
-  assert(!G_duplicate(a));assert(!G_duplicate(b));
+  //assert(!G_duplicate(a));
+  //assert(!G_duplicate(b));
   G_nodeList head = NULL, tail = NULL;
   for (; a; a = a->tail) {
     if (!head) {
