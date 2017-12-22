@@ -56,6 +56,7 @@ Temp_temp F_EDI(void);
 Temp_temp F_ESI(void);
 Temp_temp F_EBP(void);
 Temp_temp F_ESP(void);
+bool isMachineReg(Temp_temp temp);
 
 void initTempMap(Temp_map temMap);
 

@@ -11,7 +11,7 @@
 #include "liveness.h"
 #include "table.h"
 
-static Live_moveList worklistMoves = NULL;
+static Live_moveList workListMoves = NULL;
 static TAB_table moveList = NULL;
 static TAB_table usesDefs = NULL;
 static TAB_table tempToNode = NULL;
@@ -38,13 +38,75 @@ void showOutTable(G_graph flow, TAB_table out) {
 
 static Temp_tempList allTemp = NULL;
 
-Live_moveList Live_MoveList(G_node src, G_node dst, Live_moveList tail) {
+Live_moveList Live_MoveList(Live_move head, Live_moveList tail) {
 	Live_moveList lm = (Live_moveList) checked_malloc(sizeof(*lm));
-	lm->src = src;
-	lm->dst = dst;
+	lm->head = head;
 	lm->tail = tail;
 	return lm;
 }
+
+Live_move Live_Move(G_node src, G_node dst, AS_instr i) {
+	Live_move lm = (Live_move) checked_malloc(sizeof(*lm));
+	lm->src = src;
+	lm->dst = dst;
+	lm->i = i;
+	return lm;
+}
+
+bool L_inLiveMoveList(Live_move lm, Live_moveList lml) {
+	for (; lml; lml = lml->tail) {
+		if (lm->src == lml->head->src &&
+			lm->dst == lml->head->dst &&
+			lm->i == lml->head->i)
+			return TRUE;
+	}
+	return FALSE;
+}
+
+Live_moveList L_subLiveMoveList(Live_move lm, Live_moveList lml) {
+	if (!lml)
+		return NULL;
+
+	Live_moveList result = Live_MoveList(NULL, lml);	
+	for (; lml->tail; lml = lml->tail) {
+		if (lml->head->src == lm->src &&
+			lml->head->dst == lm->dst &&
+			lml->head->i == lm->i) {
+			lml->tail = lml->tail->tail;
+			if (!lml->tail)
+				break;
+		}
+	}
+	return result->tail;
+}
+
+Live_moveList L_union(Live_moveList a, Live_moveList b) {
+	Live_moveList head = NULL, tail = NULL;
+	for (; a; a = a->tail) {
+		if (!head) {
+			head = Live_MoveList(a->head, NULL);
+			tail = head;
+		}
+		else {
+			tail->tail = Live_MoveList(a->head, NULL);
+			tail = tail->tail;
+		}
+	}
+	for (; b; b = b->tail) {
+		if (!L_inLiveMoveList(b->head, a)) {
+			if (!head) {
+				head = Live_MoveList(b->head, NULL);
+				tail = head;
+			}
+			else {
+				tail->tail = Live_MoveList(b->head, NULL);
+				tail = tail->tail;
+			}
+		}
+	} 
+	return head;
+}
+
 
 static void enterLiveMap(G_table t, G_node flowNode, Temp_tempList temps) {
 	G_enter(t, flowNode, temps);
@@ -181,15 +243,21 @@ static Temp_tempList constructTempGraph(G_graph flow, G_graph g, TAB_table tempT
 	return allTemp;
 }
 
-void addToMoveList(G_node use, G_node def) {
-	/* Empty */
+void addToMoveList(G_node use, G_node def, AS_instr i) {
+	Live_move lm = Live_Move(use, def, i);
+	workListMoves = Live_MoveList(lm, workListMoves);
+
+	Live_moveList lmlu = TAB_look(moveList, use);
+	lmlu = Live_MoveList(lm, lmlu);
+	TAB_enter(moveList, use, lmlu);
+
+	Live_moveList lmld = TAB_look(moveList, def);
+	lmld = Live_MoveList(lm, lmld);
+	TAB_enter(moveList, def, lmld);
 }
 
 static G_graph makeInterferenceGraph(G_graph flow, G_table out_table) {
 	G_graph interferenceGraph = G_Graph();
-	moveList = TAB_empty();
-	tempToNode = TAB_empty();
-	usesDefs = TAB_empty();
 
 	Temp_tempList allTemp = constructTempGraph(flow, interferenceGraph, tempToNode);
 	Temp_tempList tl = NULL;
@@ -215,7 +283,8 @@ static G_graph makeInterferenceGraph(G_graph flow, G_table out_table) {
 			Temp_temp use = FG_use(nl->head)->head;
 			G_node defn = (G_node)TAB_look(tempToNode, def);
 			G_node usen = (G_node)TAB_look(tempToNode, use);
-			addToMoveList(usen, defn);	// TO DO : add coalesce
+			assert(use != def);
+			addToMoveList(usen, defn, i);
 			for (tl = liveTemp; tl; tl = tl->tail) {
 				if (tl->head != use) {
 					G_node node = (G_node)TAB_look(tempToNode, tl->head);
@@ -252,6 +321,11 @@ static G_graph makeInterferenceGraph(G_graph flow, G_table out_table) {
 }
 
 struct Live_graph Live_liveness(G_graph flow) {
+	workListMoves = NULL;
+	moveList = TAB_empty();
+	usesDefs = TAB_empty();
+	tempToNode = TAB_empty();
+
 	G_table in_table = G_empty();
 	G_table out_table = G_empty();
 	G_nodeList nodes = G_nodes(flow);
@@ -293,7 +367,8 @@ struct Live_graph Live_liveness(G_graph flow) {
 	G_graph interferenceGraph = makeInterferenceGraph(flow, out_table);
 	struct Live_graph lg;
 	lg.graph = interferenceGraph;
-	lg.moves = NULL;
+	lg.workListMoves = workListMoves;
+	lg.moveList = moveList;
 	lg.tempToNode = tempToNode;
 	lg.usesDefs = usesDefs;
 	return lg;

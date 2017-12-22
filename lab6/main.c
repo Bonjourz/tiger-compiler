@@ -47,7 +47,8 @@ static void doProc(FILE *out, F_frame frame, T_stm body)
  Temp_map F_tempMap = Temp_empty();
  initTempMap(F_tempMap);
  /*
- printf("machin reg: eax:%d, ebx:%d, ecx%d, edx:%d, edi:%d, esi:%d, esp:%d, ebp:%d\n",
+ printf("==========frame: %s==========\n", S_name(F_name(frame)));
+ printf("machine reg: eax:%d, ebx:%d, ecx%d, edx:%d, edi:%d, esi:%d, esp:%d, ebp:%d\n",
   Temp_int(F_EAX()), Temp_int(F_EBX()), Temp_int(F_ECX()), Temp_int(F_EDX()), 
   Temp_int(F_EDI()), Temp_int(F_ESI()),Temp_int(F_ESP()), Temp_int(F_EBP()));*/
  //printf("doProc for function %s:\n", S_name(F_name(frame)));
@@ -74,7 +75,7 @@ static void doProc(FILE *out, F_frame frame, T_stm body)
  //printf("divide===============\n");
  //if (!strncmp(S_name(F_name(frame)), "quicksort", 5)) {
  //AS_printInstrList(stdout, iList, Temp_layerMap(F_tempMap, Temp_name()));
- //printf("\n\n----======before RA=======-----\n\n");}
+ //printf("\n\n----======before RA=======-----\n\n");//}
 
  struct RA_result ra = RA_regAlloc(frame, iList); 
  
@@ -133,7 +134,6 @@ int main(int argc, string *argv)
    /* convert the filename */
    sprintf(outfile, "%s.s", argv[1]);
    out = fopen(outfile, "w");
-   out = NULL;
    /* Chapter 8, 9, 10, 11 & 12 */
    for (;frags;frags=frags->tail)
      if (frags->head->kind == F_procFrag) {

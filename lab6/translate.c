@@ -317,7 +317,6 @@ Tr_exp Tr_CmpOp(A_oper oper, Tr_exp left, Tr_exp right, int isstr) {
 	}
 	T_stm stm;
 	if (isstr) 
-		// TO DO: need to determine the function StrCmp
 		stm = T_Cjump(op,
 						F_externalCall("stringEqual", T_ExpList(unEx(left), T_ExpList(unEx(right), NULL))),
 							T_Const(1), NULL, NULL);

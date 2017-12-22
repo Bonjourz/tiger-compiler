@@ -81,7 +81,7 @@ bool G_inNodeList(G_node a, G_nodeList l) {
 void G_addEdge(G_node from, G_node to) {
   assert(from);  assert(to);
   assert(from->mygraph == to->mygraph);
-  if (G_goesTo(from, to)) return;
+  if (G_goesTo(from, to) || G_goesTo(to, from)) return;
   to->preds=G_NodeList(from, to->preds);
   from->succs=G_NodeList(to, from->succs);
 }
@@ -192,6 +192,43 @@ G_nodeList G_subNodeFromList(G_node n, G_nodeList l) {
   }
   
   return result->tail;
+}
+
+bool G_duplicate(G_nodeList nl) {
+  for (; nl; nl = nl->tail) {
+    if (G_inNodeList(nl->head, nl->tail))
+      return TRUE;
+  }
+  return FALSE;
+}
+
+G_nodeList G_union(G_nodeList a, G_nodeList b) {
+  assert(!G_duplicate(a));assert(!G_duplicate(b));
+  G_nodeList head = NULL, tail = NULL;
+  for (; a; a = a->tail) {
+    if (!head) {
+      head = G_NodeList(a->head, NULL);
+      tail = head;
+    }
+    else {
+      tail->tail = G_NodeList(a->head, NULL);
+      tail = tail->tail;
+    }
+  }
+
+  for (; b; b = b->tail) {
+    if (!G_inNodeList(b->head, head)) {
+      if (!head) {
+        head = G_NodeList(b->head, NULL);
+        tail = head;
+      }
+      else {
+        tail->tail = G_NodeList(b->head, NULL);
+        tail = tail->tail;
+      }
+    }
+  }
+  return head;
 }
 
 

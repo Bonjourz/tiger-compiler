@@ -257,6 +257,20 @@ Temp_temp F_ESP() {
 	return esp;
 }
 
+bool isMachineReg(Temp_temp temp) {
+	if (temp == F_EAX() |
+		temp == F_EBX() |
+		temp == F_ECX() |
+		temp == F_EDX() |
+		temp == F_EDI() |
+		temp == F_ESI() |
+		temp == F_ESP() |
+		temp == F_EBP())
+		return TRUE;
+	else
+		return FALSE;
+}
+
 void initTempMap(Temp_map temMap) {
 	Temp_enter(temMap, F_RV(), "%eax");
 	Temp_enter(temMap, F_FP(), "%ebp");
@@ -281,13 +295,13 @@ AS_proc F_procEntryExit3(F_frame f, AS_instrList body) {
 	sprintf(prologue, "push %%ebp\n");
 	sprintf(prologue, "%smovl %%esp, %%ebp\n", prologue);
 	sprintf(prologue, "%ssubl $%d, %%esp\n", prologue, f->f_cnt * F_wordSize);
-	sprintf(prologue, "%spushl %%edx\n", prologue);
+	sprintf(prologue, "%spushl %%ebx\n", prologue);
 	sprintf(prologue, "%spushl %%edi\n", prologue);
 	sprintf(prologue, "%spushl %%esi\n", prologue);
 
 	sprintf(epilogue, "popl %%esi\n");
 	sprintf(epilogue, "%spopl %%edi\n", epilogue);
-	sprintf(epilogue, "%spopl %%edx\n", epilogue);
+	sprintf(epilogue, "%spopl %%ebx\n", epilogue);
 	sprintf(epilogue, "%saddl $%d, %%esp\n", epilogue, f->f_cnt * F_wordSize);
 	sprintf(epilogue, "%spopl %%ebp\n", epilogue);
 	sprintf(epilogue, "%sret\n", epilogue);

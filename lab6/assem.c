@@ -163,3 +163,12 @@ AS_proc AS_Proc(string p, AS_instrList b, string e)
  proc->prolog=p; proc->body=b; proc->epilog=e;
  return proc;
 }
+
+bool findInstrInInstrList(AS_instr i, AS_instrList il) {
+  for (; il; il = il->tail) {
+    if (il->head == i)
+      return TRUE;
+  }
+
+  return FALSE;
+}

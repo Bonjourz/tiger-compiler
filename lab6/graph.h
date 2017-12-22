@@ -72,4 +72,10 @@ G_nodeList G_nodesLast(G_graph g);
 
 G_nodeList G_subNodeFromList(G_node n, G_nodeList l);
 
+/* Tell if there is duplicate node in the node list */
+bool G_duplicate(G_nodeList nl);
+
+/* Union two node list */
+G_nodeList G_union(G_nodeList a, G_nodeList b);
+
 #endif

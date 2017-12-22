@@ -19,6 +19,8 @@ static void munchStm(T_stm s);
 static AS_instrList iList = NULL, last = NULL;
 
 static void emit(AS_instr inst) {
+	if (inst->kind == I_MOVE && inst->u.MOVE.src->head == inst->u.MOVE.dst->head)
+		return;
 	if (last != NULL) 
     	last = last->tail = AS_InstrList(inst, NULL);
   	else 
@@ -323,18 +325,19 @@ static Temp_temp munchExp(T_exp e) {
 		case T_CALL: {
 			//printf("call\n");
 			// TO DO: src and dst
-			emit(AS_Oper("pushl %ebx", NULL, NULL, NULL));
-			emit(AS_Oper("pushl %ecx", NULL, NULL, NULL));
+			//emit(AS_Oper("pushl %ebx", NULL, NULL, NULL));
+			//emit(AS_Oper("pushl %ecx", NULL, NULL, NULL));
 			int argNum = munchArgs(e->u.CALL.args);
 			char* out1 = (char*)checked_malloc(STRLEN);
 			sprintf(out1, "call %s", Temp_labelstring(e->u.CALL.fun->u.NAME));
 			// TO DO
-			emit(AS_Oper(out1, L(F_EAX(), NULL), NULL, NULL));
+			emit(AS_Oper(out1, L(F_ECX(), L(F_EDX(), L(F_EAX(), NULL))), NULL, NULL));
+			//emit(AS_Oper(out1, L(F_EAX(), NULL), NULL, NULL));
 			char* out2 = (char *)checked_malloc(STRLEN);
 			sprintf(out2, "addl $%d, `s0", argNum * 4);
 			emit(AS_Oper(out2, NULL, L(F_ESP(), NULL), NULL));
-			emit(AS_Oper("popl %ecx", NULL, NULL, NULL));
-			emit(AS_Oper("popl %ebx", NULL, NULL, NULL));
+			//emit(AS_Oper("popl %ecx", NULL, NULL, NULL));
+			//emit(AS_Oper("popl %ebx", NULL, NULL, NULL));
 			Temp_temp tmp = Temp_newtemp();
 			return F_EAX();
 		}

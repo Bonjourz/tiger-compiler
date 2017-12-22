@@ -40,6 +40,8 @@ struct AS_proc_ {
 
 AS_proc AS_Proc(string p, AS_instrList b, string e);
 
+bool findInstrInInstrList(AS_instr i, AS_instrList il);
+
 
 //TA's implementation. Just for reference.
 //void AS_rewrite(AS_instrList iList, Temp_map m);
