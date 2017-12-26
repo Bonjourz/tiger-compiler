@@ -12,9 +12,9 @@
 #include "table.h"
 
 static Live_moveList workListMoves = NULL;
-static TAB_table moveList = NULL;
-static TAB_table usesDefs = NULL;
-static TAB_table tempToNode = NULL;
+static TAB_table moveList = NULL;	/* Map the from node to move instr related to it */ 
+static TAB_table usesDefs = NULL;	/* number of times of temp def and use */
+static TAB_table tempToNode = NULL; /* Map from temp to corresponding graph node */
 static Temp_tempList allTemp = NULL;
 
 Live_moveList Live_MoveList(Live_move head, Live_moveList tail) {

@@ -345,7 +345,7 @@ struct expty transExp(S_table venv, S_table tenv, A_exp a, Tr_level cur_l, Temp_
 			S_beginScope(venv);
 	    	/* The id defined by for should be read-only */
 			Temp_label done = Temp_newlabel();
-			Tr_access acc = Tr_allocLocal(cur_l, FALSE);
+			Tr_access acc = Tr_allocLocal(cur_l, a->u.forr.escape);
 			S_enter(venv, a->u.forr.var, E_ROVarEntry(acc, Ty_Int()));
 			struct expty body = transExp(venv, tenv, a->u.forr.body, cur_l, done);
 			S_endScope(venv);
