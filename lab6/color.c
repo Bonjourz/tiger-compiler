@@ -418,8 +418,8 @@ static void selectSpill() {
 	freezeMoves(m);
 }
 
-struct COL_result COL_color(G_graph ig, Live_moveList workListMoves, TAB_table moveList, 
-	TAB_table usesDefs) {
+struct COL_result COL_color(G_graph ig, Live_moveList inworkListMoves, TAB_table inmoveList, 
+	TAB_table inusesDefs) {
 	
 	precolored = NULL;
 	initial = NULL;
@@ -434,16 +434,16 @@ struct COL_result COL_color(G_graph ig, Live_moveList workListMoves, TAB_table m
 
 	degree = G_empty();
 	color = G_empty();
-	moveList = moveList;
+	moveList = inmoveList;
 	alias = G_empty();
 
 	coalescedMoves = NULL;
 	constrainedMoves = NULL;
 	frozenMoves = NULL;
-	workListMoves = workListMoves;
+	workListMoves = inworkListMoves;
 	activeMoves = NULL;
 
-	usesDefs = usesDefs;
+	usesDefs = inusesDefs;
 
 	build(ig);
 	makeWorkList();
