@@ -16,6 +16,7 @@ static TAB_table moveList = NULL;	/* Map the from node to move instr related to 
 static TAB_table usesDefs = NULL;	/* number of times of temp def and use */
 static TAB_table tempToNode = NULL; /* Map from temp to corresponding graph node */
 static Temp_tempList allTemp = NULL;
+static int** adjMatrix = NULL;
 
 Live_moveList Live_MoveList(Live_move head, Live_moveList tail) {
 	Live_moveList lm = (Live_moveList) checked_malloc(sizeof(*lm));
@@ -208,10 +209,30 @@ void addToMoveList(G_node use, G_node def, AS_instr i) {
 	TAB_enter(moveList, def, lmld);
 }
 
+static void initMatrix(G_graph interferenceGraph) {
+	int count = 0;
+	G_nodeList nl;
+	for (nl = G_nodes(interferenceGraph); nl; nl = nl->tail)
+		count++;
+	
+	//printf("count: %d\n", count);
+	int i;
+	adjMatrix = (int**)checked_malloc(sizeof(int *) * count);
+	
+	for (i = 0; i < count; i++) {
+		adjMatrix[i] = (int*)checked_malloc(sizeof(int) * count);
+		int j;
+		
+		for (j = 0; j < count; j++)
+			adjMatrix[i][j] = 0;
+	}
+}
+
 static G_graph makeInterferenceGraph(G_graph flow, G_table out_table) {
 	G_graph interferenceGraph = G_Graph();
 
 	Temp_tempList allTemp = constructTempGraph(flow, interferenceGraph, tempToNode);
+	initMatrix(interferenceGraph);
 	Temp_tempList tl = NULL;
 	
 	G_nodeList nl = G_nodes(flow);
@@ -240,8 +261,12 @@ static G_graph makeInterferenceGraph(G_graph flow, G_table out_table) {
 			for (tl = liveTemp; tl; tl = tl->tail) {
 				if (tl->head != use) {
 					G_node node = (G_node)TAB_look(tempToNode, tl->head);
-					if(defn != node)
+					if(defn != node) {
 						G_addEdge(defn, node);
+						//printf("%d, %d\n",G_key(defn),G_key(node));
+						adjMatrix[G_key(defn)][G_key(node)] = 1;
+						adjMatrix[G_key(node)][G_key(defn)] = 1;
+					}
 				}
 			}
 		}
@@ -262,8 +287,11 @@ static G_graph makeInterferenceGraph(G_graph flow, G_table out_table) {
 				G_node defn = (G_node)TAB_look(tempToNode, defl->head);
 				for (tl = liveTemp; tl; tl = tl->tail) {
 					G_node node = (G_node)TAB_look(tempToNode, tl->head);
-					if(defn != node)
+					if(defn != node) {
 						G_addEdge(defn, node);
+						adjMatrix[G_key(defn)][G_key(node)] = 1;
+						adjMatrix[G_key(node)][G_key(defn)] = 1;
+					}
 				}
 			}
 		}
@@ -305,6 +333,7 @@ G_table constructOutTable(G_graph flow) {
 
 struct Live_graph Live_liveness(G_graph flow) {
 	workListMoves = NULL;
+	adjMatrix = NULL;
 	moveList = TAB_empty();
 	usesDefs = TAB_empty();
 	tempToNode = TAB_empty();
@@ -318,6 +347,7 @@ struct Live_graph Live_liveness(G_graph flow) {
 	lg.moveList = moveList;
 	lg.tempToNode = tempToNode;
 	lg.usesDefs = usesDefs;
+	lg.adjMatrix = adjMatrix;
 	return lg;
 }
 

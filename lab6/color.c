@@ -38,6 +38,7 @@ static Live_moveList workListMoves = NULL;
 static Live_moveList activeMoves = NULL;
 
 static TAB_table usesDefs = NULL;
+static int** adjMatrix = NULL;
 
 static void simplify();
 static void coalesce();
@@ -212,7 +213,7 @@ static void coalesce() {
 		coalescedMoves = Live_MoveList(lm, coalescedMoves);
 		addWorkList(u);
 	}
-	else if (isMachineReg(G_nodeInfo(v)) || G_inNodeList(u, G_adj(v))) {
+	else if (isMachineReg(G_nodeInfo(v)) || adjMatrix[G_key(u)][G_key(v)]) {
 		constrainedMoves = Live_MoveList(lm, constrainedMoves);
 		addWorkList(u);
 		addWorkList(v);
@@ -236,7 +237,7 @@ static bool OK(G_nodeList nl, G_node r) {
 		if (isMachineReg((Temp_temp)G_nodeInfo(nl->head)))
 			continue;
 
-		if (G_inNodeList(nl->head, G_adj(r)))
+		if (adjMatrix[G_key(nl->head)][G_key(r)])
 			continue;
 
 		return FALSE;
@@ -288,6 +289,8 @@ static void combine(G_node u, G_node v) {
 		int *degreen = G_look(degree, u);
 		*degreen = *degreen + 1;
 		G_addEdge(nl->head, u);
+		adjMatrix[G_key(nl->head)][G_key(u)] = 1;
+		adjMatrix[G_key(u)][G_key(nl->head)] = 1;
 	}
 
 	int *degreen = G_look(degree, u);
@@ -419,7 +422,7 @@ static void selectSpill() {
 }
 
 struct COL_result COL_color(G_graph ig, Live_moveList inworkListMoves, TAB_table inmoveList, 
-	TAB_table inusesDefs) {
+	TAB_table inusesDefs, int** inadjMatrix) {
 	
 	precolored = NULL;
 	initial = NULL;
@@ -444,6 +447,7 @@ struct COL_result COL_color(G_graph ig, Live_moveList inworkListMoves, TAB_table
 	activeMoves = NULL;
 
 	usesDefs = inusesDefs;
+	adjMatrix = inadjMatrix;
 
 	build(ig);
 	makeWorkList();

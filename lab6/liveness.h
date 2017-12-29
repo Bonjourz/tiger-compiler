@@ -26,6 +26,7 @@ struct Live_graph {
 	TAB_table moveList;
 	TAB_table usesDefs;
 	TAB_table tempToNode;
+	int **adjMatrix;
 };
 Temp_temp Live_gtemp(G_node n);
 
