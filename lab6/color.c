@@ -209,6 +209,7 @@ static void coalesce() {
 		u = x;
 		v = y;
 	}
+
 	if (u == v) {
 		coalescedMoves = Live_MoveList(lm, coalescedMoves);
 		addWorkList(u);
@@ -285,12 +286,6 @@ static void combine(G_node u, G_node v) {
 	TAB_enter(moveList, u, lmlu);
 
 	G_nodeList nl = adjacent(v);
-	G_nodeList t = selectStack;
-	if (Temp_int(G_nodeInfo(v)) == 169) {
-		printf("\nnow:");
-		for (; t; t = t->tail)
-			printf("%d ", Temp_int(G_nodeInfo(t->head)));
-	}
 	for (; nl; nl = nl->tail) {
 		int *degreen = G_look(degree, u);
 		*degreen = *degreen + 1;
@@ -341,14 +336,13 @@ static void freezeMoves(G_node u) {
 static void simplify() {
 	G_node simNode;
 	G_nodeList nl = simplifyWorkList;
-
 	for (; nl; nl = nl->tail)
 		simNode = nl->head;
+
 	simplifyWorkList = G_subNodeFromList(simNode, simplifyWorkList);
 	//assert(!G_inNodeList(simNode, simplifyWorkList));
 	//assert(!G_inNodeList(simNode, selectStack));
-	if(Temp_int(G_nodeInfo(simNode)) == 169 ||
-		Temp_int(G_nodeInfo(simNode)) == 172) printf("%d\n", Temp_int(G_nodeInfo(simNode)));
+
 	if (!G_inNodeList(simNode, selectStack))
 		selectStack = G_NodeList(simNode, selectStack);
 
@@ -359,11 +353,6 @@ static void simplify() {
 }
 
 static void assignColors() {
-	G_nodeList nlt = selectStack;
-	printf("\nselectstack:");
-	for (; nlt; nlt = nlt->tail)
-		printf("%d ", Temp_int(G_nodeInfo(nlt->head)));
-	printf("\n");
 	while(selectStack != NULL) {
 		G_node node = selectStack->head;
 		selectStack = selectStack->tail;
@@ -396,9 +385,7 @@ static void assignColors() {
 			int* colorc = (int*)checked_malloc(sizeof(*colorc));
 			
 			Live_moveList lml = TAB_look(moveList, node);
-			if (Temp_int(G_nodeInfo(node)) == 186) printf("you\n");
 			if (lml) {
-				if (Temp_int(G_nodeInfo(node)) == 186) printf("fuck\n");
 				Live_move lm = lml->head;
 				G_node targetNode = (lm->src != node) ? lm->src : lm->dst;
 				int *targetColorn = G_look(color, targetNode);
