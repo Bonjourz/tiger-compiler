@@ -47,15 +47,17 @@ Live_moveList L_subLiveMoveList(Live_move lm, Live_moveList lml) {
 	if (!lml)
 		return NULL;
 
-	Live_moveList result = Live_MoveList(NULL, lml);	
-	for (; lml->tail; lml = lml->tail) {
-		if (lml->head->src == lm->src &&
-			lml->head->dst == lm->dst &&
-			lml->head->i == lm->i) {
+	Live_moveList result = Live_MoveList(NULL, lml);
+	lml = result;	
+	while (lml->tail) {
+		if (lml->tail->head->src == lm->src &&
+			lml->tail->head->dst == lm->dst &&
+			lml->tail->head->i == lm->i) { 
 			lml->tail = lml->tail->tail;
-			if (!lml->tail)
-				break;
+			continue;
 		}
+
+		lml = lml->tail;
 	}
 	return result->tail;
 }

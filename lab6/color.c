@@ -285,6 +285,12 @@ static void combine(G_node u, G_node v) {
 	TAB_enter(moveList, u, lmlu);
 
 	G_nodeList nl = adjacent(v);
+	G_nodeList t = selectStack;
+	if (Temp_int(G_nodeInfo(v)) == 169) {
+		printf("\nnow:");
+		for (; t; t = t->tail)
+			printf("%d ", Temp_int(G_nodeInfo(t->head)));
+	}
 	for (; nl; nl = nl->tail) {
 		int *degreen = G_look(degree, u);
 		*degreen = *degreen + 1;
@@ -315,7 +321,7 @@ static void freezeMoves(G_node u) {
 		G_node x = lml->head->src;
 		G_node y = lml->head->dst;
 		G_node v = NULL;
-		if (getAlias(x) == getAlias(y))
+		if (getAlias(x) == getAlias(u))
 			v = getAlias(x);
 		else
 			v = getAlias(y);
@@ -333,23 +339,34 @@ static void freezeMoves(G_node u) {
 }
 
 static void simplify() {
-	G_node simNode = simplifyWorkList->head;
-	simplifyWorkList = simplifyWorkList->tail;
+	G_node simNode;
+	G_nodeList nl = simplifyWorkList;
+
+	for (; nl; nl = nl->tail)
+		simNode = nl->head;
+	simplifyWorkList = G_subNodeFromList(simNode, simplifyWorkList);
 	//assert(!G_inNodeList(simNode, simplifyWorkList));
 	//assert(!G_inNodeList(simNode, selectStack));
+	if(Temp_int(G_nodeInfo(simNode)) == 169 ||
+		Temp_int(G_nodeInfo(simNode)) == 172) printf("%d\n", Temp_int(G_nodeInfo(simNode)));
 	if (!G_inNodeList(simNode, selectStack))
 		selectStack = G_NodeList(simNode, selectStack);
 
-	G_nodeList nl = adjacent(simNode);
+	nl = adjacent(simNode);
 	//assert(!G_inNodeList(simNode, nl));
 	for (; nl; nl = nl->tail)
 		decrementDegree(nl->head);
 }
 
 static void assignColors() {
+	G_nodeList nlt = selectStack;
+	printf("\nselectstack:");
+	for (; nlt; nlt = nlt->tail)
+		printf("%d ", Temp_int(G_nodeInfo(nlt->head)));
+	printf("\n");
 	while(selectStack != NULL) {
 		G_node node = selectStack->head;
-		selectStack = G_subNodeFromList(node, selectStack);
+		selectStack = selectStack->tail;
 		assert(!G_inNodeList(node, selectStack));
 		
 		int colorSet[REG_NUM + 2] = {1, 1, 1, 1, 1, 1, 0, 0};
@@ -377,6 +394,18 @@ static void assignColors() {
 
 		else {
 			int* colorc = (int*)checked_malloc(sizeof(*colorc));
+			
+			Live_moveList lml = TAB_look(moveList, node);
+			if (Temp_int(G_nodeInfo(node)) == 186) printf("you\n");
+			if (lml) {
+				if (Temp_int(G_nodeInfo(node)) == 186) printf("fuck\n");
+				Live_move lm = lml->head;
+				G_node targetNode = (lm->src != node) ? lm->src : lm->dst;
+				int *targetColorn = G_look(color, targetNode);
+				if (*targetColorn != -1 && colorSet[*targetColorn] != 0)
+					colorChoose = *targetColorn;
+			}
+
 			*colorc = colorChoose;
 			G_enter(color, node, colorc);
 			coloredNodes = G_NodeList(node, coloredNodes);

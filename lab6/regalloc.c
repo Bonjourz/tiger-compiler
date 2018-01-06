@@ -159,15 +159,19 @@ struct RA_result RA_regAlloc(F_frame f, AS_instrList ilIn) {
 
 
 	while (!done) {
+		/*Temp_map m = Temp_empty();
+		initTempMap(m);
+		AS_printInstrList (stdout, ilIn,
+                       Temp_layerMap(m, Temp_name()));*/
 		G_graph flow = FG_AssemFlowGraph(il, f);
 		lg = Live_liveness(flow);
 		col_ret = COL_color(lg.graph, lg.workListMoves, lg.moveList, lg.usesDefs, lg.adjMatrix);
 		
 		if (col_ret.spilledWorkList) {
-			while(col_ret.spilledWorkList) {
+			//while(col_ret.spilledWorkList) {
 				il = rewriteProgram(f, il, col_ret.spilledWorkList);
-				col_ret.spilledWorkList = col_ret.spilledWorkList->tail;
-			}
+				//col_ret.spilledWorkList = col_ret.spilledWorkList->tail;
+			//}
 		}
 		
 		else
